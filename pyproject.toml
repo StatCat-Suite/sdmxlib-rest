@@ -32,12 +32,15 @@ dependencies = [
     "starlette>=0.40",
     # Nothing is tested below 1.5.5, and nothing can resolve below it either:
     # sdmxlib requires `duckdb>=1.5.5` and is a hard dependency, so the floor
-    # here is a statement of what we support rather than inherited luck. No
-    # upper bound — sdmxlib's runtime scan-integrity guard refuses a store whose
-    # scans lose rows whatever version is installed, so a DuckDB upgrade is a
-    # performance decision, not a correctness risk (their #400 measured the
-    # "1.5.3 regression" across 1.5.0 to 1.6.0.dev and found every build alike).
-    "duckdb>=1.5.5",
+    # here is a statement of what we support rather than inherited luck.
+    # Within 1.x a DuckDB upgrade is a performance decision, not a correctness
+    # risk: sdmxlib's runtime scan-integrity guard refuses a store whose scans
+    # lose rows whatever version is installed (their #400 measured the "1.5.3
+    # regression" across 1.5.0 to 1.6.0.dev and found every build alike).
+    # The cap is an API break, not a scan one: 2.0 removed
+    # `DuckDBPyConnection.pl`, which the sdmxlib releases allowed above call.
+    # It lifts when we move to an sdmxlib that supports DuckDB 2.
+    "duckdb>=1.5.5,<2",
     "polars>=1.39",
     "pyarrow>=18",
     "orjson>=3.11",
