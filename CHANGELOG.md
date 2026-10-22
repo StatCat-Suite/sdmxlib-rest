@@ -5,6 +5,34 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-10-22
+
+Makes a fresh install work again, and moves the project to GitHub. Upgrade if
+you resolve dependencies without a lockfile: 0.6.2 installed today pulls in
+DuckDB 2.0 and fails every `/availability` request.
+
+### Fixed
+
+- **Caps `duckdb<2`.** DuckDB 2.0 removed `DuckDBPyConnection.pl`, which the
+  sdmxlib releases this package allows call. The cap lifts when we move to an
+  sdmxlib release that supports DuckDB 2.
+- The `version=latest` and wildcard structure lookups read an artefact's agency
+  as `agency_id`, not `getattr(maintainer, "id", None)`, so they can no longer
+  build a URN with no agency. Found by pyrefly 1.4; the dev floor is now 1.4.0.
+
+### Changed
+
+- **The project lives at
+  [github.com/StatCat-Suite/sdmxlib-rest](https://github.com/StatCat-Suite/sdmxlib-rest).**
+  Its history there starts at 0.6.2; earlier history and the issue tracker
+  stay readable on GitLab. A bare `#N` in the tree means the GitLab issue;
+  GitHub issues are written `GH-N`.
+- `asOf`'s OpenAPI description and 501 detail say the service runs one bundle
+  "per process", not "per pod".
+- The flag marking the zipfile isa-l patch is renamed
+  `zipfile._sdmxlib_rest_isal_patched`. The patch is idempotent, so a consumer
+  still setting the old flag only patches twice to the same effect.
+
 ## [0.6.2] - 2026-10-08
 
 Lets consumers take sdmxlib 0.67, which fixes three bugs filed from here and
