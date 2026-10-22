@@ -1231,18 +1231,12 @@ def _enumerate_with_wildcards(  # noqa: C901
 
 
 def _urn_str(artefact: object) -> str | None:
-    """Best-effort URN string for an artefact (for dedup across an enumerated walk)."""
-    urn_factory = getattr(type(artefact), "urn", None)
-    if not callable(urn_factory):
-        return None
-    try:
-        agency = getattr(getattr(artefact, "maintainer", None), "id", None) or getattr(artefact, "agency_id", "")
-        return str(
-            urn_factory(
-                agency=agency,
-                id=getattr(artefact, "id", ""),
-                version=getattr(artefact, "version", "1.0"),
-            )
-        )
-    except TypeError, AttributeError:
-        return None
+    """An artefact's URN as a string, for dedup across an enumerated walk.
+
+    Read off the artefact's own ``urn``: every maintainable and lazy wrapper
+    carries it. This used to call ``type(artefact).urn(agency=…, id=…)``, which
+    stopped working when sdmxlib made ``urn`` a property, and the ``None`` it
+    returned dropped every reference from a listing.
+    """
+    urn = getattr(artefact, "urn", None)
+    return None if urn is None else str(urn)
