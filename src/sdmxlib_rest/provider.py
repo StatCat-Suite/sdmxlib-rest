@@ -7,7 +7,7 @@ returns an :class:`OpenedCatalog` — the registry, a raw DuckDB connection,
 and an opaque build manifest.
 
 **The registry must reach its own observations.** ``/availability`` reads
-rows through ``registry.observations(flow)``, sdmxlib's query DSL, which runs
+rows through ``registry.obs(flow)``, sdmxlib's query DSL, which runs
 on the registry's own connection and attaches the lake there itself. A
 registry opened with ``LocalRegistry.bundle(path)`` does; so does pinax's
 ``Catalog``. A lake attached only to some other connection is invisible to it.

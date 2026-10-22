@@ -24,7 +24,7 @@ patching wherever they and the live renderer disagree. See issue #7.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import sdmxlib as sl
 from fastapi import HTTPException
@@ -114,7 +114,7 @@ def render_availability(
         name=sl.InternationalString(en=f"Availability for {flow_urn.id} ({component_id})"),
         version="1.0",
         constraint_type=ConstraintType.ACTUAL,
-        attachment=ConstraintAttachment(dataflow=Ref[Dataflow].unresolved(flow_urn)),
+        attachment=ConstraintAttachment(dataflows=(Ref[Dataflow].unresolved(flow_urn),)),
         regions=(CubeRegion(include=True, keys=tuple(key_values)),),
         annotations=Annotations([Annotation(id="obs_count", title=str(obs_count), type="sdmx_metrics")]),
     )
@@ -122,8 +122,14 @@ def render_availability(
     # named related artefacts to the StructureMessage alongside the constraint so
     # one response carries everything a client needs to render a value picker
     # (codelists for labels, concept schemes for descriptions, etc.).
-    ac_extras = _resolve_acreferences(registry, flow_urn, _parse_acreferences(references))
-    msg = StructureMessage(constraints=[constraint], **ac_extras)
+    ac = _resolve_acreferences(registry, flow_urn, _parse_acreferences(references))
+    msg = StructureMessage(
+        constraints=[constraint],
+        codelists=ac["codelists"],
+        concept_schemes=ac["concept_schemes"],
+        data_structures=ac["data_structures"],
+        dataflows=ac["dataflows"],
+    )
 
     # 204 No Content when the cube region is empty — the partial key plus filters
     # matched zero rows (closes #32). The constraint envelope still exists
@@ -204,12 +210,21 @@ def _collect_concept_scheme_stubs(registry: sl.LocalRegistry, dsd: sl.DataStruct
     return out
 
 
+class _AcReferences(TypedDict):
+    """The related-artefact slots `_resolve_acreferences` fills for the ``StructureMessage``."""
+
+    codelists: list[Any]
+    concept_schemes: list[Any]
+    data_structures: list[Any]
+    dataflows: list[Any]
+
+
 def _resolve_acreferences(
     registry: sl.LocalRegistry,
     flow_urn: sl.SdmxUrn[Dataflow],
     requested: frozenset[str],
-) -> dict[str, list[Any]]:
-    """Walk the dataflow's DSD per requested artefact type. Returns ``StructureMessage`` kwargs.
+) -> _AcReferences:
+    """Walk the dataflow's DSD per requested artefact type, filling each related-artefact slot.
 
     Uses the same lazy/stub helpers as the structure route's reference
     walks. The constraint payload itself is built by the caller; we just
@@ -218,7 +233,7 @@ def _resolve_acreferences(
     """
     from sdmxlib_rest.routes.structure import _stub_of  # noqa: PLC0415
 
-    out: dict[str, list[Any]] = {
+    out: _AcReferences = {
         "codelists": [],
         "concept_schemes": [],
         "data_structures": [],

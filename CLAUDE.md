@@ -75,7 +75,7 @@ fiddly parts — key parsing, projection, paging headers, SQL fragments, the
 arrow→CSV/parquet encoders — and writes its own handler around them.
 
 `/availability` is the one library route that reads observations, and it does
-so through sdmxlib's query DSL (`registry.observations(flow)`), not SQL of its
+so through sdmxlib's query DSL (`registry.obs(flow)`), not SQL of its
 own (#6). So a provider's registry must reach its lake on its own connection;
 `meta_conn` is only for consumers' seams. The DSL builds one query root per
 request, ~13–19 ms on a large census bundle (sdmxlib#426); don't cache roots

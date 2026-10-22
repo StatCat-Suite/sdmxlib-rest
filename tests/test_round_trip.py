@@ -77,15 +77,20 @@ ITEMS = "codes"
 #: Fields a format cannot carry by its own schema — not losses, and so not
 #: failures. ``isFinal`` is defined only in the SDMX-ML 2.1 XSDs
 #: (``SDMXStructureBase.xsd``); SDMX 3.0 replaced it with semantic versioning, and
-#: neither the 3.0/3.1 XSDs nor the SDMX-JSON schemas have it. Verified against
+#: neither the 3.0/3.1 XSDs nor the SDMX-JSON schemas have it. sdmxlib derives
+#: ``is_final`` from the version and keeps 2.1's flag as ``legacy_is_final``,
+#: which these formats lose only where it disagrees with the version. The rest
+#: match sdmxlib's own declaration (``sdmxlib.formats.gaps.unrepresentable``):
+#: 2.1 has no ``Link`` or ``isPartialLanguage``, 3.0 no ``isPartialLanguage``, and
+#: SDMX-JSON no ``serviceURL`` / ``structureURL``. Verified against
 #: the schemas sdmxlib vendors under ``tests/schemas``, not recalled.
 #:
 #: Each entry is asserted to *really* be lost (see the test), so if a format
 #: starts carrying one of these the exclusion fails instead of hiding it.
 UNREPRESENTABLE: dict[str, frozenset[str]] = {
-    "sdmx-json-2.0": frozenset({"is_final"}),
-    "sdmx-ml-2.1": frozenset(),
-    "sdmx-ml-3.0": frozenset({"is_final"}),
+    "sdmx-json-2.0": frozenset({"legacy_is_final", "service_url", "structure_url"}),
+    "sdmx-ml-2.1": frozenset({"links", "is_partial_language"}),
+    "sdmx-ml-3.0": frozenset({"legacy_is_final", "is_partial_language"}),
 }
 
 
@@ -97,11 +102,18 @@ def _rich_codelist(codelist_id: str, codes: list[tuple[str, str]]) -> sl.Codelis
         version="1.0",
         name=cf.istr(codelist_id),
         description=cf.istr(f"{codelist_id}, described"),
-        is_final=True,
+        # Disagrees with the version ("1.0" is not final), so it is information 2.1 alone keeps.
+        legacy_is_final=True,
         annotations=Annotations([Annotation(id="NOTE", title="kept", type="X")]),
         valid_from=dt.datetime(2020, 1, 1, tzinfo=dt.UTC),
         valid_to=dt.datetime(2030, 1, 1, tzinfo=dt.UTC),
         uri=f"https://example.test/{codelist_id}",
+        links=(sl.Link(rel="metadata", url=f"https://example.test/{codelist_id}/meta", type="text"),),
+        is_external_reference=True,
+        service_url="https://example.test/sdmx",
+        structure_url=f"https://example.test/sdmx/codelist/AG/{codelist_id}/1.0",
+        is_partial=True,
+        is_partial_language=True,
         extensions=(),
         codes=sl.ItemList([sl.Code(id=code, name=cf.istr(name)) for code, name in codes]),
     )

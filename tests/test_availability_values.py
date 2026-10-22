@@ -171,7 +171,7 @@ def test_a_miss_offers_the_scanned_values_back(world: World) -> None:
     key, resolved = values.stores[0]
     assert key == AvailabilityKey(build_id=BUILD_ID, flow_urn=FLOW, component_id="all")
     assert resolved.obs_count == 3
-    scanned = {kv.dimension_id: sorted(kv.values) for kv in resolved.key_values}
+    scanned = {kv.dimension_id: sorted(v.value for v in kv.values) for kv in resolved.key_values}
     assert scanned == {"REF_AREA": ["CA", "US"], "SEX": ["F", "M"], "TIME_PERIOD": ["2020", "2021"]}
 
 

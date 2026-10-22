@@ -155,7 +155,7 @@ def _if_modified_since_satisfied(header: str | None, built_at: datetime) -> bool
         return False
     try:
         client_dt = parsedate_to_datetime(header)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return False
     if client_dt.tzinfo is None:
         client_dt = client_dt.replace(tzinfo=UTC)

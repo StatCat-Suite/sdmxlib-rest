@@ -6,7 +6,7 @@
 fix = false
 indent-width = 4
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 
 [format]
 docstring-code-format = true
