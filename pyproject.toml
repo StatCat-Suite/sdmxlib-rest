@@ -1,6 +1,6 @@
 [project]
 name = "sdmxlib-rest"
-version = "0.6.3"
+version = "0.6.4"
 description = "Generic SDMX-REST HTTP surface over a sdmxlib LocalRegistry"
 readme = "README.md"
 # PEP 639 form. The deprecated `license = { text = ... }` table populates the
@@ -26,7 +26,10 @@ classifiers = [
 # service it was extracted from: no pinaxlib (the catalog is reached through
 # the CatalogProvider seam), no uvicorn (serving is the consumer's job).
 dependencies = [
-    "sdmxlib>=0.70,<0.71",
+    # 0.70.1, not 0.70: 0.70.0's `obs()` cannot fetch from Eurostat or BIS
+    # (StatCat-Suite/sdmxlib#50, #51). Capped at the next minor while sdmxlib
+    # is pre-1.0, where a minor may break.
+    "sdmxlib>=0.70.1,<0.71",
     "attrs>=24",
     "fastapi>=0.115",
     "starlette>=0.40",
