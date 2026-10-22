@@ -164,7 +164,7 @@ def _observations(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow])
     is a 500 that names the flow and the table to fix (#8).
     """
     try:
-        return registry.observations(flow_urn)
+        return registry.obs(flow_urn)
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=f"cannot answer availability for {flow_urn}: {exc}") from exc
 

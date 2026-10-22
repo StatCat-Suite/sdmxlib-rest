@@ -68,7 +68,17 @@ def _side_flow(world: World) -> None:
                 ]
             ),
             time_dimension=sl.TimeDimension(id="TIME_PERIOD", concept=_concept(registry, "TIME_PERIOD")),
-            attributes=sl.ItemList([sl.Attribute(id="GEO_LEVEL", concept=_concept(registry, "GEO_LEVEL"))]),
+            attributes=sl.ItemList(
+                [
+                    # A geographic level belongs to the area, so it attaches by REF_AREA.
+                    sl.Attribute(
+                        id="GEO_LEVEL",
+                        concept=_concept(registry, "GEO_LEVEL"),
+                        attachment=sl.AttachmentLevel.SERIES,
+                        related_dimensions=["REF_AREA"],
+                    )
+                ]
+            ),
             measures=sl.ItemList([sl.Measure(id="OBS_VALUE", concept=_concept(registry, "OBS_VALUE"))]),
         )
     )

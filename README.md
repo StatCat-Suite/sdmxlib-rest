@@ -41,7 +41,7 @@ The defaults are all *inert*, not *broken*: a consumer that installs none of
 them gets a correct service, just one that recomputes more than it needs to.
 
 **The registry has to reach its own observations.** `/availability` reads rows
-through sdmxlib's query DSL (`registry.observations(flow)`), which runs on the
+through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
 registry's own connection and attaches the lake there. Open a bundle with
 `LocalRegistry.bundle(path)`, or any opener that does the same (pinax's
 `Catalog` does). A lake attached only to some other connection is invisible to

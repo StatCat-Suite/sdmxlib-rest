@@ -15,7 +15,7 @@
 # alongside basedpyright. See the note at the bottom.
 
 # Match basedpyright's target (pyproject.toml `[tool.basedpyright]`).
-python-version = "3.13"
+python-version = "3.14"
 python-platform = "linux"
 python-interpreter = ".venv/bin/python"
 

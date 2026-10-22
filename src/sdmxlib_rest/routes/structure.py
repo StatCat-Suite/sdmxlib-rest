@@ -1244,5 +1244,5 @@ def _urn_str(artefact: object) -> str | None:
                 version=getattr(artefact, "version", "1.0"),
             )
         )
-    except (TypeError, AttributeError):
+    except TypeError, AttributeError:
         return None

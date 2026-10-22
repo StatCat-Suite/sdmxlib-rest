@@ -23,7 +23,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from fastapi import Request
-    from sdmxlib.model.validation import ValidationError
+    from sdmxlib.model.errors import ValidationError
 
 
 async def unwritable_content_response(request: Request, exc: ValidationError) -> JSONResponse:
@@ -34,7 +34,7 @@ async def unwritable_content_response(request: Request, exc: ValidationError) ->
     request target says which query hit it, which a listing needs: there the
     path is the only thing naming the artefact.
     """
-    issues = [{"path": i.path, "message": i.message, "severity": i.severity} for i in exc.issues]
+    issues = [{"path": i.path, "message": i.message} for i in exc.issues]
     target = request.url.path + (f"?{request.url.query}" if request.url.query else "")
     logger.error(
         "unwritable content: {target} — {n} validation issue(s): {paths}",

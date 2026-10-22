@@ -28,7 +28,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
-from sdmxlib.model.validation import ValidationError
+from sdmxlib.model.errors import ValidationError
 
 from sdmxlib_rest.middleware.compression import SelectiveGZipMiddleware, install_isal_zip_backend
 from sdmxlib_rest.middleware.etag import ConditionalGetMiddleware
