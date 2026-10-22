@@ -31,11 +31,11 @@ jobs:
           python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: pyproject.toml
-      - uses: extractions/setup-just@v4
-        with:
-          just-version: "1.46.0"
       - run: uv sync --group dev
-      - run: just check
+      # just from PyPI (rust-just is its official wheel), not extractions/setup-just:
+      # that action lists GitHub releases to find the version, and intermittently
+      # failed with "no release for just matching version specifier 1.46.0".
+      - run: uvx --from rust-just==1.46.0 just check
 
   test:
     runs-on: ubuntu-latest
@@ -46,8 +46,5 @@ jobs:
           python-version: "3.13"
           enable-cache: true
           cache-dependency-glob: pyproject.toml
-      - uses: extractions/setup-just@v4
-        with:
-          just-version: "1.46.0"
       - run: uv sync --group dev
-      - run: just test
+      - run: uvx --from rust-just==1.46.0 just test
