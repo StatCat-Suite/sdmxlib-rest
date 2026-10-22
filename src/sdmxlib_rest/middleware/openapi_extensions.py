@@ -15,7 +15,7 @@ Closes #37.
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, Final, cast
 
 # Vendor query parameters across all routes. The shared
 # :func:`apply_vendor_markers` walks every operation and tags any
@@ -88,7 +88,8 @@ def apply_vendor_markers(spec: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(path_item, dict):
             continue
         path_is_vendor = path_template in _VENDOR_PATH_TEMPLATES
-        for method_name, op in path_item.items():
+        # OpenAPI path-item keys are strings; `isinstance` alone narrows to dict[Unknown, Unknown].
+        for method_name, op in cast("dict[str, Any]", path_item).items():
             if method_name in _PATH_ITEM_NON_METHOD_KEYS or method_name.startswith("x-"):
                 continue
             if not isinstance(op, dict):

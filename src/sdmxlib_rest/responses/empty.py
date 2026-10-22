@@ -77,6 +77,8 @@ def to_204_if_empty(response: Response) -> Response:
     """
     if response.status_code != 200:
         return response
+    # Starlette declares `media_type = None` unannotated, so its type is unknown to pyrefly.
+    # pyrefly: ignore[unknown-attribute-access]
     if not (response.media_type and "json" in response.media_type and isinstance(response.body, bytes)):
         return response
     if not response.body:
