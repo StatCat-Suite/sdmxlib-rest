@@ -9,32 +9,23 @@ default:
 lint:
     uv run ruff check src tests
 
+# pyrefly at `preset = "all"` minus a documented deny-list (see pyrefly.toml)
+# is the only type checker. Keep it at 0 findings. It covers `src` and
+# `tests`, and dead suppressions fail here too: `unused-ignore` and
+# `unused-type-ignore` are both on.
+#
+# Type check: pyrefly at preset = "all", src + tests
 [group('dev')]
 typecheck:
-    uv run basedpyright src
-
-# Independent second-opinion pass: pyrefly at `preset = "all"` minus a
-# documented deny-list (see pyrefly.toml). basedpyright stays the source of
-# truth; pyrefly adds the implicit-Any family, override enforcement, and the
-# warn-tier checks a default run hides. Part of `check` — this target is for
-# running it alone.
-#
-# Second-opinion type check: pyrefly at preset = "all"
-[group('dev')]
-pyrefly:
     uv run pyrefly check
 
 [group('dev')]
 checkfmt:
     uv run ruff format --check src tests
 
-# `pyrefly` joined this list once its inherited backlog hit 0 (see pyrefly.toml's
-# closing note). It runs LAST: basedpyright is still the source of truth, and
-# when both fire on one change its message is the one to read first.
-#
 # Lint + typecheck (inner dev loop)
 [group('dev')]
-check: lint checkfmt typecheck pyrefly
+check: lint checkfmt typecheck
 
 # Format code
 [group('dev')]

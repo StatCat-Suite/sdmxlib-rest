@@ -52,7 +52,7 @@ FORMATS = {
 
 #: (path, params, whether codelists come back as stubs). The two stub routes are
 #: the ones #9 touched; the full codelist is the control that codes survive too.
-ROUTES = {
+ROUTES: dict[str, tuple[str, dict[str, str], bool]] = {
     "structure-references-children": ("/structure/dataflow/AG/DF_POP/1.0", {"references": "children"}, True),
     "availability-references-codelist": (
         "/availability/dataflow/AG/DF_POP/1.0/all/all",
@@ -173,6 +173,7 @@ def test_every_codelist_field_survives_the_round_trip(
     assert resp.status_code == 200, resp.text[:300]
 
     message = read(resp.content)
+    assert isinstance(message, sl.StructureMessage)
     assert message.codelists, "the discrimination check: codelists really were in the response"
 
     unrepresentable = UNREPRESENTABLE[fmt]
@@ -204,10 +205,11 @@ def test_the_rich_fixture_populates_every_codelist_field() -> None:
     codelist = _rich_codelist("CL_X", [("A", "a")])
     exempt = {"extensions", "version"}
     unset = []
+    # A bare codelist holds every default as attrs stores it, converters applied.
+    bare = sl.Codelist(id="CL_X", maintainer=cf.AGENCY, name=cf.istr("CL_X"))
     for field in attrs.fields(sl.Codelist):
         if not field.init or field.name in exempt or field.default is attrs.NOTHING:
             continue
-        default = field.default.factory() if isinstance(field.default, attrs.Factory) else field.default  # pyright: ignore[reportAttributeAccessIssue]
-        if getattr(codelist, field.name) == default:
+        if getattr(codelist, field.name) == getattr(bare, field.name):
             unset.append(field.name)
     assert unset == [], f"set these in _rich_codelist so the round trip covers them: {unset}"

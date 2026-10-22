@@ -23,7 +23,7 @@ holds by construction rather than by ordering, and the docstring now says so.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 import pytest
 from fastapi import APIRouter
@@ -315,6 +315,7 @@ def test_a_consumer_middleware_cannot_reject_a_cors_preflight() -> None:
     rejected: list[str] = []
 
     class RejectEverything(BaseHTTPMiddleware):
+        @override
         async def dispatch(self, request: Any, call_next: Any) -> Response:
             rejected.append(request.method)
             return Response(status_code=401, content=b"nope")

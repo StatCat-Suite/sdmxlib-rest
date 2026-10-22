@@ -62,8 +62,8 @@ def test_an_empty_codelist_stub_is_falsy(world: World) -> None:
     still right, because it never asks the question.
     """
     stub = _stub_lazy(world.registry.get(GEO))
-    assert stub is not None
-    assert len(stub) == 0  # pyright: ignore[reportArgumentType]
+    assert isinstance(stub, sl.Codelist)
+    assert len(stub) == 0
     assert not stub, "an emptied Codelist stub is falsy under sdmxlib 0.62+"
 
 
@@ -75,7 +75,8 @@ def test_stub_of_builds_a_lazy_codelist_stub_without_materialising(world: World,
 
     assert materialised == []
     assert type(stub).__name__ == "Codelist"
-    assert len(stub) == 0  # pyright: ignore[reportArgumentType]
+    assert isinstance(stub, sl.Codelist)
+    assert len(stub) == 0
 
 
 def test_stub_of_still_stubs_an_artefact_that_has_no_lazy_wrapper(world: World) -> None:
@@ -168,7 +169,8 @@ def test_the_fast_stub_is_the_same_stub_the_slow_path_builds(kind: str) -> None:
 
     fast = _stub_lazy(lazy)
     assert fast == _stub(_materialize(lazy))
-    assert fast.annotations == annotations  # pyright: ignore[reportAttributeAccessIssue]
+    assert isinstance(fast, (sl.Codelist, sl.Hierarchy))
+    assert fast.annotations == annotations
 
 
 # ── The queried artefact itself as a stub ────────────────────────────────────

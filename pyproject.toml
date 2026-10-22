@@ -89,24 +89,14 @@ source = ["src/sdmxlib_rest"]
 show_missing = true
 skip_covered = false
 
-[tool.basedpyright]
-pythonVersion = "3.14"
-typeCheckingMode = "standard"
-venvPath = "."
-venv = ".venv"
-exclude = [".venv"]
-reportAny = "none"
-reportExplicitAny = "none"
-reportUnknownVariableType = "none"
-reportUnknownMemberType = "none"
-reportUnknownArgumentType = "none"
-
 [dependency-groups]
 dev = [
-    "basedpyright>=1.38.4",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.24",
-    "httpx>=0.28",
+    "httpx2>=2.0",
     "ruff>=0.16.1",
-    "pyrefly>=1.4.0",
+    # Capped at the next minor: under `preset = "all"` a pyrefly minor can add
+    # a rule, and without a cap it lands in CI unannounced — 1.4 did exactly
+    # that with `unknown-attribute-access`. Raise it deliberately, on its own.
+    "pyrefly>=1.4.0,<1.5",
 ]

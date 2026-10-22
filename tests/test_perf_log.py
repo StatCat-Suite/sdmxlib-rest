@@ -10,12 +10,17 @@ Guards two things:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.testclient import TestClient
 
 from sdmxlib_rest.middleware.perf_log import PerfLogMiddleware
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 pytestmark = pytest.mark.unit
 
@@ -35,7 +40,7 @@ def _make_app_with_sink() -> tuple[FastAPI, list[dict[str, object]]]:
 
     @app.get("/stream")
     def stream() -> StreamingResponse:
-        def _iter() -> object:
+        def _iter() -> Iterator[bytes]:
             yield b"a" * 1000
             yield b"b" * 2000
 
@@ -108,7 +113,9 @@ def test_query_string_is_not_logged() -> None:
     assert "query" not in rec  # no field named query / query_string
     for value in rec.values():
         assert "secret=oops" not in str(value)
-    assert rec["query_len"] > 0
+    query_len = rec["query_len"]
+    assert isinstance(query_len, int)
+    assert query_len > 0
 
 
 def test_options_is_skipped() -> None:

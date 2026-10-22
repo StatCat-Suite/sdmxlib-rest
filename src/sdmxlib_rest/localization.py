@@ -24,7 +24,6 @@ Scope notes:
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from fastapi.responses import Response
 
@@ -149,8 +148,11 @@ def localize_sdmx_json(body: bytes, accept_language: str | None) -> tuple[bytes,
 # Field pairs: (singular field, plural-multilingual field).
 _LOCALISABLE_FIELDS = (("name", "names"), ("description", "descriptions"))
 
+# A parsed JSON body, so the walk below narrows to real types rather than `Any`.
+type _Json = dict[str, _Json] | list[_Json] | str | int | float | bool | None
 
-def _walk_and_localise(node: Any, preferred: list[str], chosen_out: set[str]) -> None:
+
+def _walk_and_localise(node: _Json, preferred: list[str], chosen_out: set[str]) -> None:
     """Recursively rewrite ``name`` (against ``names``) on every dict node."""
     if isinstance(node, dict):
         for single, multi in _LOCALISABLE_FIELDS:

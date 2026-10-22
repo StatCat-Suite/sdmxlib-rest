@@ -13,7 +13,7 @@ the live route disagree. One renderer, one shape.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sdmxlib.model.constraint import KeyValue
@@ -22,6 +22,8 @@ from sdmxlib.model.dataflow import Dataflow
 from sdmxlib_rest.responses.availability import render_availability
 
 if TYPE_CHECKING:
+    from starlette.responses import Response
+
     from tests.conftest import World
 
 pytestmark = pytest.mark.unit
@@ -33,26 +35,29 @@ VALUES = (
 )
 
 
-def _render(world: World, **over: object) -> object:
-    kwargs: dict[str, object] = {
-        "registry": world.registry,
-        "flow_urn": FLOW,
-        "component_id": "all",
-        "key_values": VALUES,
-        "obs_count": 3,
-        "accept": None,
-        "accept_language": None,
-    }
-    kwargs.update(over)
-    return render_availability(**kwargs)  # pyright: ignore[reportArgumentType]
+def _render(world: World, *, component_id: str = "all", obs_count: int = 3, accept: str | None = None) -> Response:
+    return render_availability(
+        registry=world.registry,
+        flow_urn=FLOW,
+        component_id=component_id,
+        key_values=VALUES,
+        obs_count=obs_count,
+        accept=accept,
+        accept_language=None,
+    )
+
+
+def _json(resp: Response) -> Any:
+    # Starlette types a rendered body as `bytes | memoryview`, and json.loads refuses a memoryview.
+    return json.loads(bytes(resp.body))
 
 
 def test_value_lists_alone_render_a_constraint(world: World) -> None:
     """The consumer path: hand it values and a count, get SDMX-JSON back."""
     resp = _render(world)
 
-    assert resp.status_code == 200  # pyright: ignore[reportAttributeAccessIssue]
-    body = json.loads(resp.body)  # pyright: ignore[reportAttributeAccessIssue]
+    assert resp.status_code == 200
+    body = _json(resp)
     constraints = body["data"]["dataConstraints"]
     assert len(constraints) == 1
     region = constraints[0]["cubeRegions"][0]
@@ -62,7 +67,7 @@ def test_value_lists_alone_render_a_constraint(world: World) -> None:
 
 def test_the_obs_count_annotation_carries_the_count(world: World) -> None:
     """.Stat's "(N observations)" badge reads this, so it is load-bearing."""
-    body = json.loads(_render(world, obs_count=123456789).body)  # pyright: ignore[reportAttributeAccessIssue]
+    body = _json(_render(world, obs_count=123456789))
     annotations = body["data"]["dataConstraints"][0]["annotations"]
     assert annotations == [{"id": "obs_count", "title": "123456789", "type": "sdmx_metrics"}]
 
@@ -76,35 +81,33 @@ def test_the_constraint_declares_itself_actual_and_named(world: World) -> None:
     an override — worth pinning, because reading `_inject_constraint_annotations`
     alone suggests the opposite.
     """
-    constraint = json.loads(_render(world).body)["data"]["dataConstraints"][0]  # pyright: ignore[reportAttributeAccessIssue]
+    constraint = _json(_render(world))["data"]["dataConstraints"][0]
     assert constraint["type"] == "Actual"
     assert constraint["name"] == "Availability for DF_POP (all)"
 
 
 def test_an_empty_cube_is_a_204_not_an_empty_constraint(world: World) -> None:
     resp = _render(world, obs_count=0)
-    assert resp.status_code == 204  # pyright: ignore[reportAttributeAccessIssue]
-    assert not resp.body  # pyright: ignore[reportAttributeAccessIssue]
+    assert resp.status_code == 204
+    assert not resp.body
 
 
 def test_an_xml_accept_gets_sdmx_ml(world: World) -> None:
     resp = _render(world, accept="application/vnd.sdmx.structure+xml;version=2.1")
-    assert resp.media_type is not None  # pyright: ignore[reportAttributeAccessIssue]
-    assert "xml" in resp.media_type  # pyright: ignore[reportAttributeAccessIssue]
-    assert b"<" in resp.body  # pyright: ignore[reportAttributeAccessIssue]
+    assert "xml" in resp.headers["content-type"]
+    assert b"<" in resp.body
 
 
 def test_a_browser_accept_naming_xml_still_gets_json(world: World) -> None:
     """Browsers send `…,application/xml;q=0.9` and do not want SDMX-ML."""
     browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     resp = _render(world, accept=browser)
-    assert resp.media_type is not None  # pyright: ignore[reportAttributeAccessIssue]
-    assert "json" in resp.media_type  # pyright: ignore[reportAttributeAccessIssue]
+    assert "json" in resp.headers["content-type"]
 
 
 def test_the_component_id_names_the_constraint(world: World) -> None:
     """``all`` and a specific dimension are different artefacts, not one reused."""
-    every = json.loads(_render(world).body)["data"]["dataConstraints"][0]  # pyright: ignore[reportAttributeAccessIssue]
-    one = json.loads(_render(world, component_id="GEO").body)["data"]["dataConstraints"][0]  # pyright: ignore[reportAttributeAccessIssue]
+    every = _json(_render(world))["data"]["dataConstraints"][0]
+    one = _json(_render(world, component_id="GEO"))["data"]["dataConstraints"][0]
     assert every["id"] == "AVAIL_all"
     assert one["id"] == "AVAIL_GEO"

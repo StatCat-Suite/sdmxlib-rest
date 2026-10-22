@@ -11,12 +11,17 @@ Guards two invariants:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient
 
 from sdmxlib_rest.middleware.head_method import HeadMethodMiddleware
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 pytestmark = pytest.mark.unit
 
@@ -107,7 +112,7 @@ def test_head_streaming_response_body_is_dropped_cleanly() -> None:
 
     @app.get("/stream")
     def stream() -> StreamingResponse:
-        def _iter() -> object:
+        def _iter() -> Iterator[bytes]:
             yield b"chunk1"
             yield b"chunk2"
             yield b"chunk3"

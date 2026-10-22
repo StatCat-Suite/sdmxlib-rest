@@ -27,10 +27,17 @@ import duckdb
 import pytest
 import sdmxlib as sl
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from sdmxlib_rest.app import MiddlewareSpec, Mount, RestSettings, create_app, library_routers
+from sdmxlib_rest.middleware.compression import SelectiveGZipMiddleware
+from sdmxlib_rest.middleware.etag import ConditionalGetMiddleware
+from sdmxlib_rest.middleware.head_method import HeadMethodMiddleware
+from sdmxlib_rest.middleware.lang_override import LangOverrideMiddleware
+from sdmxlib_rest.middleware.perf_log import PerfLogMiddleware
+from sdmxlib_rest.middleware.version_token import SdmxVersionAdvertiseMiddleware
 from sdmxlib_rest.provider import OpenedCatalog
 from sdmxlib_rest.runtime import CatalogRuntime
 
@@ -113,7 +120,9 @@ def test_a_toy_provider_boots_a_working_service(toy: tuple[TestClient, ToyProvid
 
 def test_library_routes_are_published(toy: tuple[TestClient, ToyProvider]) -> None:
     """Structure, metadata and availability all reach the published spec."""
-    paths = _spec_paths(toy[0].app)  # type: ignore[attr-defined]
+    app = toy[0].app
+    assert isinstance(app, FastAPI)
+    paths = _spec_paths(app)
     assert any(p.startswith("/structure/") for p in paths)
     assert any(p.startswith("/metadata/") for p in paths)
     assert any(p.startswith("/availability/") for p in paths)
@@ -123,14 +132,14 @@ def test_middleware_stack_is_in_the_invariant_order() -> None:
     """The documented chain, outermost first. Reordering this is a silent bug."""
     app, _ = _build()
     # `user_middleware` is stored outermost-first (reverse of add order).
-    assert [m.cls.__name__ for m in app.user_middleware] == [
-        "CORSMiddleware",
-        "PerfLogMiddleware",
-        "HeadMethodMiddleware",
-        "SelectiveGZipMiddleware",
-        "SdmxVersionAdvertiseMiddleware",
-        "LangOverrideMiddleware",
-        "ConditionalGetMiddleware",
+    assert [m.cls for m in app.user_middleware] == [
+        CORSMiddleware,
+        PerfLogMiddleware,
+        HeadMethodMiddleware,
+        SelectiveGZipMiddleware,
+        SdmxVersionAdvertiseMiddleware,
+        LangOverrideMiddleware,
+        ConditionalGetMiddleware,
     ]
 
 
@@ -141,9 +150,9 @@ def test_outer_middleware_lands_just_inside_cors() -> None:
         pass
 
     app, _ = _build(outer_middleware=[MiddlewareSpec(_Tap)])
-    names = [m.cls.__name__ for m in app.user_middleware]
-    assert names[0] == "CORSMiddleware", "CORS must stay outermost"
-    assert names[1] == "_Tap", "consumer middleware sits directly inside CORS"
+    classes = [m.cls for m in app.user_middleware]
+    assert classes[0] is CORSMiddleware, "CORS must stay outermost"
+    assert classes[1] is _Tap, "consumer middleware sits directly inside CORS"
 
 
 def test_mounts_share_one_catalog_open() -> None:

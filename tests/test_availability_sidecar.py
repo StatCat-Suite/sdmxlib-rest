@@ -14,7 +14,7 @@ count (#8). sdmxlib refuses one when the flow's query root is built
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -110,7 +110,7 @@ def _side_flow(world: World) -> None:
 
 
 @contextmanager
-def _client(*, fan: int = 1, **runtime: Any) -> Iterator[TestClient]:
+def _client(*, fan: int = 1, **runtime: Any) -> Generator[TestClient]:
     world = build_world(extra_lake=_sidecar(fan))
     _side_flow(world)
     app = create_app(

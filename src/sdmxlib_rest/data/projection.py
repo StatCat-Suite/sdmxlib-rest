@@ -221,8 +221,8 @@ def label_maps_for_dims(
     Takes the ``dim_id -> codelist URN`` mapping rather than deriving it, so
     consumers can supply a cached one. Uses ``LazyCodelist.code_map``, which is
     itself cached per (codelist_urn, lang). Dims without an enumeration, or
-    with a non-lazy codelist, yield no entry — the CSV emit path passes their
-    ids through unchanged.
+    whose codelist the registry cannot resolve, yield no entry — the CSV emit
+    path passes their ids through unchanged.
 
     Args:
         registry: Registry used to resolve each codelist URN.
@@ -236,11 +236,8 @@ def label_maps_for_dims(
         if not col:
             continue
         cl = registry.get(cl_urn)
-        code_map = getattr(cl, "code_map", None)
-        if callable(code_map):
-            mapping = code_map(lang=lang)
-            if isinstance(mapping, dict):
-                out[col] = mapping
+        if isinstance(cl, sl.CodelistLike):
+            out[col] = cl.code_map(lang=lang)
     return out
 
 

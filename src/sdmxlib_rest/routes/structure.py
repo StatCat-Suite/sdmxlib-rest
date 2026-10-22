@@ -867,9 +867,6 @@ def _resolve_children(artefact: object, registry: sl.LocalRegistry) -> list[obje
         dsd = registry.get(artefact.structure.urn)
         if dsd is None:
             return refs
-        materialize = getattr(dsd, "materialize", None)
-        if callable(materialize):
-            dsd = materialize()
         refs.append(dsd)
         if isinstance(dsd, sl.DataStructure):
             refs.extend(_walk_dsd_outbound_refs(dsd, registry))
@@ -1088,9 +1085,6 @@ def _resolve_dsd_for_ref_walk(
         dsd = registry.get(artefact.structure.urn)
         if dsd is None:
             return None
-        mat = getattr(dsd, "materialize", None)
-        if callable(mat):
-            dsd = mat()
         if isinstance(dsd, sl.DataStructure):
             refs.append(_stub(dsd))
             return dsd

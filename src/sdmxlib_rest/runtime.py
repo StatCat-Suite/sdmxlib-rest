@@ -30,6 +30,7 @@ from sdmxlib_rest.structure_cache import NullStructureCache
 if TYPE_CHECKING:
     import duckdb
     import sdmxlib as sl
+    from starlette.applications import Starlette
 
     from sdmxlib_rest.availability_values import AvailabilityValues
     from sdmxlib_rest.filter_shaper import ComponentFilterShaper
@@ -113,14 +114,14 @@ class CatalogRuntime:
             self._opened = None
 
 
-def attach_runtime(app: object, runtime: CatalogRuntime) -> None:
+def attach_runtime(app: Starlette, runtime: CatalogRuntime) -> None:
     """Store ``runtime`` on ``app.state.rest_runtime`` (the request-dep lookup key)."""
-    app.state.rest_runtime = runtime  # type: ignore[attr-defined]
+    app.state.rest_runtime = runtime
 
 
-def share_runtime(parent_app: object, sub_app: object) -> None:
+def share_runtime(parent_app: Starlette, sub_app: Starlette) -> None:
     """Point a mounted sub-app at its parent's runtime so one open serves both."""
-    sub_app.state.rest_runtime = parent_app.state.rest_runtime  # type: ignore[attr-defined]
+    sub_app.state.rest_runtime = parent_app.state.rest_runtime
 
 
 def get_runtime(request: Request) -> CatalogRuntime:

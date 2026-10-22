@@ -1,30 +1,35 @@
-# pyrefly.toml — second type-checker + fast editor (nvim LSP) pass.
+# pyrefly.toml — the project's type checker (`just typecheck`, editor LSP).
 #
-# basedpyright (via `just check` / CI, config in pyproject.toml
-# `[tool.basedpyright]`) remains the source of truth. pyrefly runs at FULL
-# strength alongside it as an independent second opinion, plus the
-# `implicit-any` family that basedpyright only approximates.
+# pyrefly is the only checker. Until October 2026 basedpyright was the source of
+# truth over `src/` and pyrefly a second opinion. That meant two checkers to
+# satisfy, suppressions written in each one's syntax, and `unused-type-ignore`
+# switched off, because neither checker could tell a dead `# type: ignore` from
+# one carrying the other's error. ../sdmxlib made the same move.
 #
-# Mirrors ../sdmxlib/pyrefly.toml, which reached 0 findings at `preset = "all"`
-# with no suppressions. The subtractions below are inherited from that work —
-# same house style, same third-party boundaries (duckdb / pyarrow / polars /
-# fastapi call sites). Counts in the comments are from THIS repo's first full
-# run, not sdmxlib's.
+# One checker also brought `tests/` under it, at full strength: there are no
+# per-directory subtractions. Most of what that surfaced had one cause.
+# Starlette's TestClient is typed against `httpx2`, which was not installed, so
+# every client call and response was an implicit `Any` (345 findings). Adding
+# `httpx2` cleared them. The rest were fixed in code: untyped test helpers, a
+# generator standing in for a context manager, and a bench test of a route
+# helper that #6 had deleted.
 #
-# Target is 0 findings, and we are there — so pyrefly is part of `just check`
-# alongside basedpyright. See the note at the bottom.
+# Re-measuring the subtractions over the wider scope showed three of them near
+# zero. Turning those on found a real bug: a wildcard listing dropped every
+# reference, because `_urn_str` still called sdmxlib's `urn` as a factory long
+# after it became a property.
+#
+# Keep this at 0 findings. A new one is a real defect, not noise.
 
-# Match basedpyright's target (pyproject.toml `[tool.basedpyright]`).
+# Matches `requires-python` in pyproject.toml.
 python-version = "3.14"
 python-platform = "linux"
 python-interpreter = ".venv/bin/python"
 
-# src-layout with one package (sdmxlib_rest). Only first-party
-# code is checked, mirroring CI's `basedpyright src`. Widen project-includes to
-# add "tests" for editor feedback there — expect more implicit-any noise, since
-# test fixtures are less annotated.
-search-path = ["src"]
-project-includes = ["src"]
+# src-layout. "." is on the search path so tests can import `tests.conftest`,
+# as they do at runtime under pytest.
+search-path = ["src", "."]
+project-includes = ["src", "tests"]
 project-excludes = ["**/__pycache__", "**/.venv", "**/node_modules"]
 
 # Governance model, deliberately the same one ruff runs under: turn EVERYTHING
@@ -32,61 +37,47 @@ project-excludes = ["**/__pycache__", "**/.venv", "**/node_modules"]
 # enables every error kind at error severity — including the ones pyrefly ships
 # at `warn`, which `--min-severity error` would otherwise hide. The upside over
 # an allow-list is that a NEW error kind in the next pyrefly release arrives as
-# a visible finding instead of silently not running.
+# a visible finding instead of silently not running. pyproject.toml caps pyrefly
+# below the next minor, so that arrival is a deliberate bump, not a CI surprise.
 preset = "all"
 
 [errors]
 # ── Subtractions from `preset = "all"` ────────────────────────────────────
-# Everything below is off on purpose. Measured counts are from the run that
-# introduced this config; they are the argument, not decoration.
+# Everything below is off on purpose. Counts are measured over src/ + tests/
+# when pyrefly became the only checker; they are the argument, not decoration.
 #
-# The bulk rejections are all the same shape — a house style we hold
-# deliberately, or third-party boundary noise we don't control:
-implicit-bool = false          # 347 — `if not ids:` / `if rows:` is idiomatic Python
-unknown-argument-type = false  #  66 — duckdb / pyarrow / polars / fastapi call sites
-unknown-variable-type = false  #  30 — same, on the receiving end
-unused-call-result = false     #  28 — mostly `conn.execute(...)`, whose return we do not want
+# House style, held deliberately:
+implicit-bool = false          # 107 — `if not ids:` / `if rows:` is idiomatic Python
+unused-call-result = false     #  39 — mostly `conn.execute(...)`, whose return we do not want
 
-# `explicit-any` (99) flags every literal `Any` token, including phantom type
+# `explicit-any` (84) flags every literal `Any` token, including phantom type
 # args like `SdmxUrn[Any]` where the object stays concretely typed and
 # body-checking is unaffected. The check we actually want is `implicit-any` — a
-# type *degrading* to Any — and that one is on via the preset.
+# type *degrading* to Any — and that family is on via the preset.
 explicit-any = false
 
-# Re-exports through the package `__init__.py` files are the public API
-# surface; `implicit-reexport` wants an explicit `as` alias or `__all__` entry
-# for each. Worth revisiting as a deliberate API-surface pass — especially for
-# `sdmxlib_rest`, now that it is a published library — not as a
-# side effect of a checker change.
-implicit-reexport = false
+# No longer subtracted, each fixed to zero when pyrefly became the only
+# checker: `unknown-argument-type` and `unknown-variable-type` (11 between
+# them: duck-typed `getattr` calls, untyped JSON walks, and the `_urn_str` bug
+# above), and `implicit-reexport` (0).
 
-# `unused-type-ignore` (4) is not enabled here, and cannot be: pyrefly and
-# basedpyright both honour `# type: ignore`, so neither can tell on its own
-# whether a comment is dead or is carrying the *other* checker's error. The
-# hygiene check lives with basedpyright (`reportUnnecessaryTypeIgnoreComment`),
-# and checker-specific suppressions are written in each tool's own syntax so
-# they stay attributable.
-unused-type-ignore = false
+# Dead suppressions fail the gate: `unused-type-ignore` for the shared
+# `# type: ignore` form, and `unused-ignore` (on via the preset) for pyrefly's
+# own `# pyrefly: ignore[...]`. So every suppression left is load-bearing.
+unused-type-ignore = true
 
-# ── At zero ───────────────────────────────────────────────────────────────
-# The subtractions above take this repo from 659 findings to ~81. That backlog
-# was inherited from the extraction rather than written here, and it is now
-# burned down: `pyrefly check` reports 0 errors, so `pyrefly` has been added to
-# `just check` and is enforced from here on.
-#
-# What the burn-down actually was, for anyone re-reading the diff: almost all of
-# it was bare generics and unannotated empty containers on parsed-JSON and
-# artefact-walk locals — `dict` where the code meant `dict[str, Any]`,
-# `list[sl.SdmxUrn]` where it meant `list[sl.SdmxUrn[sl.ConceptScheme]]`. Two
-# were worth more than an annotation: `_serialise` took an invariant
-# `list[object]` no caller could satisfy (now `Sequence[object]`), and
-# `_resolve_acreferences` returns `list[Any]` rather than `list[object]`
-# BECAUSE its result is splatted into `StructureMessage`'s per-class slots —
-# narrowing that one to `object` is what a naive fix does, and it fails.
-#
-# One suppression remains, in `routes/structure.py::_evolve`: pyrefly's attrs
-# plugin resolves `evolve`'s first argument against a concrete attrs class and
-# has no spelling for "some attrs instance", which is all the `object`-typed
-# artefact helpers can promise. Neither `AttrsInstance` nor `cast` satisfies
-# it. The two call sites were funnelled through one helper so it costs one
-# `# pyrefly: ignore`, not two. Re-check on the next pyrefly release.
+# ── Suppressions that remain ──────────────────────────────────────────────
+# Each states its reason at the site. By kind:
+# - Deliberate monkey-patching: `middleware/compression.py` patches private
+#   `zipfile` internals (3), and `app.py` assigns `app.openapi`, FastAPI's
+#   documented way to customise the schema.
+# - Messages assembled from untyped registry reads: `routes/metadata.py`
+#   `_serialise`, and `routes/structure.py`'s slot-keyed `StructureMessage`.
+# - `routes/structure.py::_evolve`: pyrefly's attrs plugin resolves `evolve`'s
+#   first argument against a concrete attrs class and has no spelling for "some
+#   attrs instance", which is all the `object`-typed artefact helpers can
+#   promise. Funnelled through one helper so it costs one suppression.
+# - Starlette declares `Response.media_type = None` unannotated (`splice.py`,
+#   `responses/empty.py`).
+# - `tests/test_cache_control_header.py` passes `None` for the registry and
+#   connection the middleware under test never reads.
