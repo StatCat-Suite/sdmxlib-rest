@@ -5,6 +5,24 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-10-22
+
+Restores the references in a structure listing. Upgrade if any client asks for
+a wildcard or `latest` listing with `references=`, as .Stat's structure
+listings do.
+
+### Fixed
+
+- **A wildcard listing inlines its references again.** A wildcard or `latest`
+  structure request with `references=` returned the queried artefacts and none
+  of their references: `/structure/dataflow/all/all/all?references=children`
+  came back without the DSDs, concept schemes and codelists that the same
+  request for one dataflow inlines. Listings dedupe references by URN, and the
+  URN was built by calling sdmxlib's `urn` as a factory. sdmxlib 0.50 made `urn`
+  a property, so every reference was skipped as unidentifiable. This has been
+  broken since the move past sdmxlib 0.50. A single-artefact request was never
+  affected.
+
 ## [0.6.3] - 2026-10-22
 
 Makes a fresh install work again, and moves the project to GitHub. Upgrade if
