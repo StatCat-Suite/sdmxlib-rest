@@ -19,6 +19,7 @@ These tests pin the three claims that design rests on:
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -32,7 +33,7 @@ from sdmxlib_rest.runtime import CatalogRuntime
 from tests.conftest import BUILD_ID, _WorldProvider
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from sdmxlib_rest.filter_shaper import FilterContext
     from tests.conftest import World
@@ -67,7 +68,8 @@ class ConstrainEverything:
         return sl.parse_components("CA..", {}, KEY_DIMS)
 
 
-def _client(world: World, values: Recorder, **runtime: Any) -> Iterator[TestClient]:
+@contextmanager
+def _client(world: World, values: Recorder, **runtime: Any) -> Generator[TestClient]:
     app = create_app(
         CatalogRuntime(_WorldProvider(world), availability_values=values, **runtime),
         RestSettings(title="test-sdmx-api", version="0.1.0"),
@@ -124,7 +126,7 @@ def test_one_key_serves_every_client_spelling(world: World) -> None:
         {"headers": {"Accept": "application/vnd.sdmx.structure+xml;version=2.1"}},
         {"headers": {"Accept": "application/vnd.sdmx.structure+json;version=2.0.0;urn=true"}},
     ]
-    for client in _client(world, values):
+    with _client(world, values) as client:
         for spelling in spellings:
             resp = client.get(URL, **spelling)
             assert resp.status_code == 200, (spelling, resp.text)
@@ -136,7 +138,7 @@ def test_one_key_serves_every_client_spelling(world: World) -> None:
 def test_the_key_is_per_component(world: World) -> None:
     """``all`` and one dimension are different answers, so different entries."""
     values = Recorder()
-    for client in _client(world, values):
+    with _client(world, values) as client:
         client.get(URL)
         client.get("/availability/dataflow/AG/DF_POP/1.0/all/SEX")
     assert [k.component_id for k in values.lookups] == ["all", "SEX"]
@@ -152,7 +154,7 @@ def test_precomputed_values_are_served_instead_of_a_scan(world: World) -> None:
         obs_count=999,
     )
     values = Recorder(baked)
-    for client in _client(world, values):
+    with _client(world, values) as client:
         payload = client.get(URL).json()
 
     assert _values(payload, "REF_AREA") == ["ZZ"]
@@ -164,7 +166,7 @@ def test_precomputed_values_are_served_instead_of_a_scan(world: World) -> None:
 def test_a_miss_offers_the_scanned_values_back(world: World) -> None:
     """A consumer with no producer-side bake can still scan once per build."""
     values = Recorder()
-    for client in _client(world, values):
+    with _client(world, values) as client:
         client.get(URL)
 
     assert len(values.stores) == 1
@@ -178,7 +180,7 @@ def test_a_miss_offers_the_scanned_values_back(world: World) -> None:
 def test_an_empty_answer_is_stored_and_served_as_a_204(world: World) -> None:
     """A zero count is as expensive to derive as a full one, so it is worth keeping."""
     values = Recorder(ResolvedAvailability(key_values=(), obs_count=0))
-    for client in _client(world, values):
+    with _client(world, values) as client:
         resp = client.get(URL)
     assert resp.status_code == 204
 
@@ -188,7 +190,7 @@ def test_an_empty_answer_is_stored_and_served_as_a_204(world: World) -> None:
 
 def test_a_c_filter_never_consults_the_seam(world: World) -> None:
     values = Recorder(ResolvedAvailability(key_values=(), obs_count=999))
-    for client in _client(world, values):
+    with _client(world, values) as client:
         payload = client.get(URL, params={"c[REF_AREA]": "CA"}).json()
     assert values.lookups == []
     assert values.stores == []
@@ -197,7 +199,7 @@ def test_a_c_filter_never_consults_the_seam(world: World) -> None:
 
 def test_a_partial_key_counts_as_filtered(world: World) -> None:
     values = Recorder(ResolvedAvailability(key_values=(), obs_count=999))
-    for client in _client(world, values):
+    with _client(world, values) as client:
         client.get("/availability/dataflow/AG/DF_POP/1.0/CA../all")
     assert values.lookups == []
     assert values.stores == []
@@ -205,7 +207,7 @@ def test_a_partial_key_counts_as_filtered(world: World) -> None:
 
 def test_period_bounds_count_as_filtered(world: World) -> None:
     values = Recorder(ResolvedAvailability(key_values=(), obs_count=999))
-    for client in _client(world, values):
+    with _client(world, values) as client:
         client.get(URL, params={"startPeriod": "2021"})
     assert values.lookups == []
 
@@ -218,7 +220,7 @@ def test_a_constraint_the_shaper_adds_turns_the_seam_off(world: World) -> None:
     must not be asked, and the scan must reflect the shaped filter.
     """
     values = Recorder(ResolvedAvailability(key_values=(), obs_count=999))
-    for client in _client(world, values, filter_shaper=ConstrainEverything()):
+    with _client(world, values, filter_shaper=ConstrainEverything()) as client:
         payload = client.get(URL).json()
 
     assert values.lookups == [], "the URL is unfiltered but the request is not"

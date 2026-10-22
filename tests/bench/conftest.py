@@ -98,7 +98,7 @@ class Bundle:
                     os.close(fd)
         return evicted
 
-    def connect(self, **config: object) -> duckdb.DuckDBPyConnection:
+    def connect(self, **config: bool | float | list[str] | str) -> duckdb.DuckDBPyConnection:
         """A fresh connection with the same lake attached, for pragma tests."""
         conn = duckdb.connect(config=config or None)
         conn.execute("INSTALL ducklake; LOAD ducklake;")
@@ -157,7 +157,9 @@ def bundle() -> Iterator[Bundle]:
 
     sidecar_only = set() if sidecar is None else set(_columns(conn, sidecar)) - set(main_cols)
     dims = tuple(c for c in main_cols if not c.startswith(_MEASURE_PREFIXES) and c not in sidecar_only)
-    rows = int(conn.execute(f"SELECT count(*) FROM {main}").fetchone()[0])  # pyright: ignore[reportOptionalSubscript]
+    counted = conn.execute(f"SELECT count(*) FROM {main}").fetchone()
+    assert counted is not None, "count(*) always returns a row"
+    rows = int(counted[0])
 
     yield Bundle(
         conn=conn,

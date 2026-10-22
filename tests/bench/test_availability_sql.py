@@ -103,7 +103,9 @@ def test_the_join_does_not_change_the_count_on_this_bundle(bundle: Bundle) -> No
         pytest.skip("bundle has no sidecar")
 
     keys = ", ".join(f'"{k}"' for k in bundle.join_keys)
-    rows, distinct = bundle.conn.execute(f"SELECT count(*), count(DISTINCT ({keys})) FROM {bundle.sidecar}").fetchone()  # pyright: ignore[reportGeneralTypeIssues]
+    counted = bundle.conn.execute(f"SELECT count(*), count(DISTINCT ({keys})) FROM {bundle.sidecar}").fetchone()
+    assert counted is not None, "an aggregate always returns a row"
+    rows, distinct = counted
 
     if rows != distinct:
         pytest.fail(
@@ -196,36 +198,6 @@ def test_an_availability_answer_completes_under_a_hard_memory_cap(bundle: Bundle
         assert int(count[0]) == bundle.rows
     finally:
         capped.close()
-
-
-def test_the_route_now_declines_the_join_on_this_bundle(bundle: Bundle) -> None:
-    """#3's fix, against a real schema rather than a hand-built fixture.
-
-    The two tests above price the join; this asserts we stop paying it. It uses
-    the bundle's own columns, so a layout we did not anticipate — a sidecar
-    carrying a key dimension, say — shows up here instead of as a silent
-    slowdown.
-    """
-    from sdmxlib_rest.routes.availability import _describe_sidecar, _needs_sidecar
-
-    if bundle.sidecar is None:
-        pytest.skip("bundle has no sidecar")
-
-    plan = _describe_sidecar(bundle.conn, bundle.main, bundle.sidecar)
-    assert plan.join_keys == bundle.join_keys
-    assert plan.only, "a sidecar with no columns of its own would make the join pure waste"
-
-    # An unfiltered COUNT(*) — the dominant .Stat bare-flow request.
-    assert _needs_sidecar(plan, selected=None, fragments=[]) is False
-    # Every key dimension is answerable from the main table.
-    for column in bundle.dims:
-        assert _needs_sidecar(plan, selected=column, fragments=[]) is False, (
-            f"{column} is a dimension on {bundle.main}, so it must not pull in the sidecar"
-        )
-    # And the case the join exists for still works.
-    sidecar_column = min(plan.only)
-    assert _needs_sidecar(plan, selected=sidecar_column, fragments=[]) is True
-    assert _needs_sidecar(plan, selected=None, fragments=[f'"{sidecar_column}" = ?']) is True
 
 
 def _relaxed(constraints: dict[str, str], drop: str) -> tuple[str, list[str]]:

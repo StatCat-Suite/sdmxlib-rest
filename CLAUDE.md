@@ -138,10 +138,10 @@ carrying a "Moved from GitLab #N" line.
 ## Common commands
 
 ```bash
-just check     # ruff + basedpyright + pyrefly
+just check     # ruff + pyrefly (src + tests)
 just test      # unit tests
 just ci        # full gate
-just pyrefly   # the second-opinion type check alone (also part of `check`)
+just typecheck # pyrefly alone (also part of `check`)
 just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not in `ci`
 ```
 

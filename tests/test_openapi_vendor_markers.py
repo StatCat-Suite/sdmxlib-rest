@@ -10,6 +10,8 @@ Closes #37.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from sdmxlib_rest.middleware.openapi_extensions import apply_vendor_markers
@@ -17,25 +19,26 @@ from sdmxlib_rest.middleware.openapi_extensions import apply_vendor_markers
 pytestmark = pytest.mark.unit
 
 
-def _make_op(*params: dict) -> dict:
+def _make_op(*params: dict[str, Any]) -> dict[str, Any]:
     """Build a minimal OpenAPI operation object with the supplied parameter list."""
     return {"parameters": list(params)}
 
 
-def _param(name: str, location: str = "query") -> dict:
+def _param(name: str, location: str = "query") -> dict[str, Any]:
     return {"name": name, "in": location}
 
 
-def _spec_with(paths: dict) -> dict:
+def _spec_with(paths: dict[str, Any]) -> dict[str, Any]:
     return {"paths": paths}
 
 
-def _find_param(spec: dict, path: str, name: str) -> dict | None:
-    op = spec["paths"][path]["get"]
-    for p in op.get("parameters") or []:
+def _find_param(spec: dict[str, Any], path: str, name: str) -> dict[str, Any]:
+    op: dict[str, Any] = spec["paths"][path]["get"]
+    params: list[dict[str, Any]] = op.get("parameters") or []
+    for p in params:
         if p.get("name") == name:
             return p
-    return None
+    pytest.fail(f"no {name!r} parameter on GET {path}")
 
 
 # ── vendor param markers (per name) ──────────────────────────────────────────
@@ -52,9 +55,7 @@ def test_vendor_param_picks_up_x_vendor(vendor_name: str) -> None:
     )
     apply_vendor_markers(spec)
     for path in ("/some/path", "/another/path"):
-        p = _find_param(spec, path, vendor_name)
-        assert p is not None
-        assert p.get("x-vendor") is True
+        assert _find_param(spec, path, vendor_name).get("x-vendor") is True
 
 
 def test_non_vendor_param_does_not_pick_up_x_vendor() -> None:
@@ -62,9 +63,7 @@ def test_non_vendor_param_does_not_pick_up_x_vendor() -> None:
     spec = _spec_with({"/some/path": {"get": _make_op(_param("detail"), _param("references"))}})
     apply_vendor_markers(spec)
     for name in ("detail", "references"):
-        p = _find_param(spec, "/some/path", name)
-        assert p is not None
-        assert "x-vendor" not in p
+        assert "x-vendor" not in _find_param(spec, "/some/path", name)
 
 
 # ── vendor path markers (whole route) ────────────────────────────────────────
@@ -89,7 +88,8 @@ def test_vendor_path_picks_up_x_vendor(vendor_path: str) -> None:
     spec = _spec_with({vendor_path: {"get": _make_op()}})
     apply_vendor_markers(spec)
     # Marker lands on the operation, NOT at path-item level.
-    assert spec["paths"][vendor_path]["get"].get("x-vendor") is True
+    get_op: dict[str, Any] = spec["paths"][vendor_path]["get"]
+    assert get_op.get("x-vendor") is True
     assert "x-vendor" not in spec["paths"][vendor_path]
 
 

@@ -29,7 +29,8 @@ JSON_MEDIA = "application/vnd.sdmx.structure+json;version=2.0"
 
 def _artefacts(payload: dict[str, Any], kind: str) -> list[dict[str, Any]]:
     """The ``kind`` collection out of an SDMX-JSON 2.0 structure message."""
-    return payload.get("data", {}).get(kind, [])
+    found: list[dict[str, Any]] = payload.get("data", {}).get(kind, [])
+    return found
 
 
 def test_a_dataflow_resolves_by_its_coordinates(client: TestClient) -> None:
