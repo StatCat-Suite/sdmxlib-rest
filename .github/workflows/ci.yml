@@ -1,0 +1,53 @@
+# The quality gate, run on every PR and every push to main.
+#
+# Unlike sdmxlib, which keeps its gate local, these jobs run automatically:
+# this package has no consumer's suite exercising it on every change, so CI is
+# the only thing standing between a bad merge and a release.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes a run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes no moving major tag, only full versions.
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: "1.46.0"
+      - run: uv sync --group dev
+      - run: just check
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: "1.46.0"
+      - run: uv sync --group dev
+      - run: just test

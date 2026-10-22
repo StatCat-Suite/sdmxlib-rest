@@ -48,10 +48,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://gitlab.com/pinax-suite/sdmxlib-rest"
-Repository = "https://gitlab.com/pinax-suite/sdmxlib-rest"
-"Issue Tracker" = "https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues"
-Changelog = "https://gitlab.com/pinax-suite/sdmxlib-rest/-/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/StatCat-Suite/sdmxlib-rest"
+Repository = "https://github.com/StatCat-Suite/sdmxlib-rest"
+"Issue Tracker" = "https://github.com/StatCat-Suite/sdmxlib-rest/issues"
+Changelog = "https://github.com/StatCat-Suite/sdmxlib-rest/blob/main/CHANGELOG.md"
 
 [build-system]
 # uv_build ships in lockstep with uv, so this range tracks uv's minors rather

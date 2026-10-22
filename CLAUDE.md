@@ -122,6 +122,19 @@ the sequence; that assertion is deliberate, not incidental.
 - Conventional commits — `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
 - Tests are plain functions; module-level `pytestmark = pytest.mark.unit`.
 
+## Issue references
+
+Issues live on GitHub (StatCat-Suite/sdmxlib-rest). The project moved from
+GitLab in October 2026, and the tree cites the GitLab tracker as a bare `#N` —
+`#6`, `#35`. Those keep meaning GitLab (gitlab.com/pinax-suite/sdmxlib-rest, an
+archive now) and are not rewritten; `sdmxlib#N` likewise means sdmxlib's GitLab
+tracker.
+
+**Write a GitHub issue or PR as `GH-N`**, never a bare `#N`: GitHub numbers
+from 1, so a bare number would collide with the GitLab one the tree already
+means. The issues still open at the move were re-created on GitHub, each
+carrying a "Moved from GitLab #N" line.
+
 ## Common commands
 
 ```bash
@@ -136,9 +149,10 @@ just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not 
 
 Versions independently of any consumer — a consumer pins a range and upgrades
 deliberately. Pre-1.0, breaking a seam Protocol is a minor bump; after 1.0 it is
-a major. `just release-1-preview` through `release-4-push`. git-cliff drafts
-the changelog entry (steps 1-2); step 4 publishes the *curated* CHANGELOG.md
-section, not the regenerated one.
+a major. `just release-1-preview` through `release-4-merge`: a release is a
+`release/vX` PR like any other change. git-cliff drafts the changelog entry
+(steps 1-2); step 4 publishes the *curated* CHANGELOG.md section, not the
+regenerated one.
 
 ## Related repos
 
