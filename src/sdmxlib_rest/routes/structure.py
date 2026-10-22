@@ -135,7 +135,7 @@ _STRUCTURE_200_CONTENT: dict[int | str, dict[str, Any]] = {
 }
 
 
-_TYPES: dict[str, type] = {
+_TYPES: dict[str, type[sl.MaintainableArtefact]] = {
     "datastructure": sl.DataStructure,
     "dataflow": sl.Dataflow,
     "codelist": sl.Codelist,
@@ -178,7 +178,7 @@ _ITEM_FIELD: dict[type[object], str] = {
 # Maps the spec's itemSchemeType keywords to (scheme class, scheme's item field).
 # Only Codelist + ConceptScheme item schemes are implemented; the spec's
 # other values (agencyscheme, categoryscheme, transformationscheme, …) 501.
-_ITEM_SCHEME_TYPES: dict[str, tuple[type, str]] = {
+_ITEM_SCHEME_TYPES: dict[str, tuple[type[sl.MaintainableArtefact], str]] = {
     "codelist": (sl.Codelist, "codes"),
     "conceptscheme": (sl.ConceptScheme, "concepts"),
 }
@@ -1138,7 +1138,7 @@ def _version_key(version: str) -> tuple[int, ...]:
 
 def _resolve_latest(
     registry: sl.LocalRegistry,
-    cls: type,
+    cls: type[sl.MaintainableArtefact],
     *,
     agency: str,
     id_: str,
@@ -1151,7 +1151,7 @@ def _resolve_latest(
     """
     versions: list[str] = []
     for art in registry.get_all(cls):
-        a_urn = cls.urn_for(agency=getattr(art.maintainer, "id", None), id=art.id, version=art.version)
+        a_urn = cls.urn_for(agency=art.agency_id, id=art.id, version=art.version)
         if a_urn.agency == agency and a_urn.id == id_:
             versions.append(a_urn.version)
     if not versions:
@@ -1161,7 +1161,7 @@ def _resolve_latest(
 
 def _enumerate_with_wildcards(  # noqa: C901
     registry: sl.LocalRegistry,
-    cls: type,
+    cls: type[sl.MaintainableArtefact],
     *,
     agency: str,
     id_: str,
@@ -1185,7 +1185,7 @@ def _enumerate_with_wildcards(  # noqa: C901
     version_is_open = version in (_WILDCARD, _LATEST)
     out: list[Any] = []
     for art in all_arts:
-        a_urn = cls.urn_for(agency=getattr(art.maintainer, "id", None), id=art.id, version=art.version)
+        a_urn = cls.urn_for(agency=art.agency_id, id=art.id, version=art.version)
         if agency not in (_WILDCARD, a_urn.agency):
             continue
         if id_ not in (_WILDCARD, a_urn.id):
@@ -1198,13 +1198,13 @@ def _enumerate_with_wildcards(  # noqa: C901
         # Reduce to one-per-(agency, id) at the highest version.
         latest_per_group: dict[tuple[str, str], Any] = {}
         for art in out:
-            a_urn = cls.urn_for(agency=getattr(art.maintainer, "id", None), id=art.id, version=art.version)
+            a_urn = cls.urn_for(agency=art.agency_id, id=art.id, version=art.version)
             key = (a_urn.agency, a_urn.id)
             prev = latest_per_group.get(key)
             if prev is None:
                 latest_per_group[key] = art
             else:
-                prev_urn = cls.urn_for(agency=getattr(prev.maintainer, "id", None), id=prev.id, version=prev.version)
+                prev_urn = cls.urn_for(agency=prev.agency_id, id=prev.id, version=prev.version)
                 if _version_key(a_urn.version) > _version_key(prev_urn.version):
                     latest_per_group[key] = art
         out = list(latest_per_group.values())

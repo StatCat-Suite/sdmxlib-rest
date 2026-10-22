@@ -108,6 +108,8 @@ async def run_structure_splices(
 
 
 def _is_json_response(response: Response) -> bool:
+    # Starlette declares `media_type = None` unannotated, so its type is unknown to pyrefly.
+    # pyrefly: ignore[unknown-attribute-access]
     return bool(response.media_type and "json" in response.media_type and isinstance(response.body, bytes))
 
 

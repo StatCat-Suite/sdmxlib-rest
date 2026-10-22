@@ -73,18 +73,27 @@ release-1-preview:
     @echo ""
     @git-cliff --bump --unreleased
 
-# Inserts the new section above the newest existing one. Deliberately NOT
-# `git-cliff --bump -o CHANGELOG.md`, which regenerates the whole file from
-# commit subjects: that replaces the curated entries (0.1.0's "Extracted from
-# its first consumer" prose and its Added list, 0.2.0's Breaking section) with three
-# generated bullets, and rewrites the Keep a Changelog header with cliff.toml's.
+# Starts release/vVERSION from origin/main, then inserts the new section above
+# the newest one. Deliberately NOT `git-cliff --bump -o CHANGELOG.md`, which
+# regenerates the whole file from commit subjects: that replaces the curated
+# entries (0.1.0's "Extracted from its first consumer" prose and its Added list,
+# 0.2.0's Breaking section) with three generated bullets, and rewrites the Keep
+# a Changelog header with cliff.toml's. It would also drop every entry before
+# 0.6.2, since GitHub's history starts at a single "sdmxlib-rest 0.6.2" commit.
 # Generated output is the *starting point* for an entry here, not the entry.
 #
-# Insert a generated entry above the newest one, then edit it
+# Start release/vX from origin/main and insert a generated entry, then edit it
 [group('release')]
 release-2-changelog VERSION:
     #!/usr/bin/env bash
     set -euo pipefail
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "error: the working tree has changes; commit or stash them first" >&2
+      exit 1
+    fi
+    git fetch origin --tags
+    git switch --detach origin/main
+    git switch -c "release/v{{VERSION}}"
     echo "Writing changelog for v{{VERSION}}..."
     git-cliff --unreleased --tag "v{{VERSION}}" > /tmp/cliff-section.md
     python3 - "{{VERSION}}" <<'EOF'
@@ -108,30 +117,36 @@ release-2-changelog VERSION:
     rm -f /tmp/cliff-section.md
     echo ""
     echo "Generated entry inserted. EDIT IT — group the breaking changes and say"
-    echo "what a consumer has to do — then run: just release-3-tag {{VERSION}}"
+    echo "what a consumer has to do — then run: just release-3-pr"
 
-# Takes the version explicitly rather than re-deriving it, so the tag cannot
+# The version comes from the branch release-2-changelog started, so it cannot
 # disagree with the changelog entry just written. git-cliff bumps a breaking
 # change to the next MAJOR; pre-1.0 this project treats a seam break as a minor
 # (see the Versioning section of CLAUDE.md), so the two would differ.
 #
-# Bump pyproject, commit and tag the release
+# Bump pyproject, commit, push release/vX and open its PR
 [group('release')]
-release-3-tag VERSION:
+release-3-pr:
     #!/usr/bin/env bash
     set -euo pipefail
-    grep -q "^## \[{{VERSION}}\]" CHANGELOG.md || {
-      echo "CHANGELOG.md has no [{{VERSION}}] section — run: just release-2-changelog {{VERSION}}" >&2
+    BRANCH=$(git branch --show-current)
+    if [[ "${BRANCH}" != release/v* ]]; then
+      echo "error: not on a release/vX branch (run just release-2-changelog VERSION)" >&2
       exit 1
-    }
-    uv version "{{VERSION}}"
+    fi
+    VER="${BRANCH#release/}"
+    # Extracted BEFORE anything is pushed: a missing or empty section should
+    # abort while it is still a local problem.
+    NOTES=$(just _release-notes "${VER#v}")
+    uv version "${VER#v}"
     # Not uv.lock — it is gitignored on purpose (see .gitignore: consumers of a
     # published library resolve from pyproject.toml). `git add` on an ignored
     # path errors, which under `set -e` aborted the release half-done.
     git add CHANGELOG.md pyproject.toml
-    git commit -m "chore(release): v{{VERSION}}"
-    git tag -a "v{{VERSION}}" -m "v{{VERSION}}"
-    echo "Tagged v{{VERSION}} — run: just release-4-push"
+    git commit -m "chore(release): ${VER}"
+    git push -u origin "${BRANCH}"
+    gh pr create --base main --head "${BRANCH}" --title "chore(release): ${VER}" --body "${NOTES}"
+    echo "When the PR's checks are green, run: just release-4-merge"
 
 # Notes come from CHANGELOG.md, NOT `git-cliff --latest`. Generated output is
 # the starting point for an entry, not the entry (see release-2-changelog), so
@@ -139,20 +154,48 @@ release-3-tag VERSION:
 # worked example: cliff listed a uv_build pin that lost a merge and never
 # shipped, because the superseded commit is still unreleased-since-the-last-tag.
 #
-# Push the release commit + tag, then publish the GitLab release
+# Merge the release PR once CI is green, tag its merge commit, mint the GitHub release
 [group('release')]
-release-4-push:
+release-4-merge:
     #!/usr/bin/env bash
     set -euo pipefail
-    VER=$(git describe --tags --abbrev=0)
-    NOTES=$(mktemp)
-    trap 'rm -f "${NOTES}"' EXIT
-    # Extracted BEFORE the push on purpose: a missing or empty section should
-    # abort while it is still a local problem, rather than leave a pushed tag
-    # with no release attached to it.
-    python3 - "${VER#v}" <<'EOF' > "${NOTES}"
-    import pathlib, re, sys
-    version = sys.argv[1]
+    BRANCH=$(git branch --show-current)
+    if [[ "${BRANCH}" != release/v* ]]; then
+      echo "error: not on a release/vX branch" >&2
+      exit 1
+    fi
+    VER="${BRANCH#release/}"
+    NOTES=$(just _release-notes "${VER#v}")
+    if [[ "$(gh pr view "${BRANCH}" --json state --jq .state)" != MERGED ]]; then
+      # Exits non-zero if any check fails, so a red CI stops the release here.
+      gh pr checks "${BRANCH}" --watch --fail-fast
+      gh pr merge "${BRANCH}" --merge
+    fi
+    # `gh pr merge` has exited 0 without merging; trust the state, not the exit.
+    STATE=$(gh pr view "${BRANCH}" --json state --jq .state)
+    if [[ "${STATE}" != MERGED ]]; then
+      echo "error: the ${BRANCH} PR is ${STATE}, not merged" >&2
+      exit 1
+    fi
+    MERGE=$(gh pr view "${BRANCH}" --json mergeCommit --jq .mergeCommit.oid)
+    git fetch origin
+    git switch main
+    git merge --ff-only origin/main
+    git tag -a "${VER}" -m "${VER}" "${MERGE}"
+    # Only this tag: the local clone may still hold the GitLab-era tags, which
+    # point into history GitHub does not have.
+    git push origin "${VER}"
+    gh release create "${VER}" --verify-tag --title "${VER}" --notes "${NOTES}"
+    git branch -D "${BRANCH}"
+    git push origin --delete "${BRANCH}"
+    echo "Released ${VER} on GitHub. Next: just build && just publish"
+
+# Print the curated CHANGELOG.md section for VERSION, without its heading line
+# (GitHub titles the release itself).
+_release-notes VERSION:
+    #!/usr/bin/env python3
+    import pathlib, re
+    version = "{{VERSION}}"
     text = pathlib.Path("CHANGELOG.md").read_text()
     start = re.search(rf"^## \[{re.escape(version)}\]", text, re.M)
     if start is None:
@@ -160,16 +203,10 @@ release-4-push:
     rest = text[start.end() :]
     following = re.search(r"^## \[", rest, re.M)
     body = rest if following is None else rest[: following.start()]
-    # Drop the remainder of the heading line — GitLab titles the release itself.
     body = body.split("\n", 1)[1].strip()
     if not body:
         raise SystemExit(f"CHANGELOG.md's [{version}] section is empty — write it before releasing")
     print(body)
-    EOF
-    git push
-    git push --tags
-    glab release create "${VER}" --name "${VER}" --notes-file "${NOTES}"
-    echo "Released ${VER} on GitLab"
 
 [group('release')]
 build:

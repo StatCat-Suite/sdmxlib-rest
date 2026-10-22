@@ -68,15 +68,6 @@ implicit-reexport = false
 # they stay attributable.
 unused-type-ignore = false
 
-# pyrefly 1.2.0 regression: fires on EVERY lambda whose parameter type came
-# from bidirectional inference, even when that inference succeeded. Minimal
-# repro — `xs: list[str]; sorted(xs, key=lambda s: s.upper())` reports `s` as
-# unknown while happily type-checking `s.upper()`. Python has no lambda
-# parameter annotation syntax, so the only "fix" is rewriting sort keys as
-# named functions to satisfy a diagnostic that is simply wrong. (4 here.)
-# Re-check on the next pyrefly release and drop this line when it's fixed.
-implicit-any-lambda = false
-
 # ── At zero ───────────────────────────────────────────────────────────────
 # The subtractions above take this repo from 659 findings to ~81. That backlog
 # was inherited from the extraction rather than written here, and it is now

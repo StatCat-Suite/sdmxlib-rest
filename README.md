@@ -1,7 +1,7 @@
 # sdmxlib-rest
 
 A generic [SDMX-REST](https://github.com/sdmx-twg/sdmx-rest) HTTP surface over a
-[sdmxlib](https://gitlab.com/pinax-suite/sdmxlib) `LocalRegistry`.
+[sdmxlib](https://github.com/StatCat-Suite/sdmxlib) `LocalRegistry`.
 
 It owns the parts of an SDMX-REST service that are the same everywhere — URL
 grammar, content negotiation, localisation, streaming, response assembly — and
@@ -86,6 +86,11 @@ them.
 Extracted from a production SDMX-REST service and versioned independently from
 `0.1.0`. The seam set is settled; the `create_app` signature may still move
 before `1.0`.
+
+Issues are tracked on [GitHub](https://github.com/StatCat-Suite/sdmxlib-rest/issues).
+The project started on GitLab, so a bare `#7` in code, comments or docs means
+an issue in the [GitLab tracker](https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues),
+which stays readable as an archive. GitHub issues are written `GH-12`.
 
 ## Licence
 
