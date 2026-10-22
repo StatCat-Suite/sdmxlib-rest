@@ -127,7 +127,12 @@ def bundle() -> Iterator[Bundle]:
     if not lake.is_file():
         pytest.skip(f"{lake} is not a file — {_ENV} should name a bundle directory")
 
-    attach = f"ATTACH 'ducklake:{lake}' AS lake (READ_ONLY, DATA_PATH '{directory / 'parquet'}/')"
+    # OVERRIDE_DATA_PATH, as sdmxlib's `LocalRegistry.bundle()` does: a catalog
+    # records the data path it was written with, often relative to the builder's
+    # working directory, and DuckDB 2.0 refuses a DATA_PATH that differs from it.
+    attach = (
+        f"ATTACH 'ducklake:{lake}' AS lake (READ_ONLY, DATA_PATH '{directory / 'parquet'}/', OVERRIDE_DATA_PATH true)"
+    )
     conn = duckdb.connect()
     conn.execute("INSTALL ducklake; LOAD ducklake;")
     conn.execute(attach)
