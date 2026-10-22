@@ -120,6 +120,23 @@ def test_a_wildcard_enumerates_every_artefact_of_the_type(client: TestClient) ->
     assert sorted(c["id"] for c in _artefacts(resp.json(), "codelists")) == ["CL_GEO", "CL_SEX"]
 
 
+@pytest.mark.parametrize("listing", ["AG/all/latest", "all/all/all"])
+def test_a_listing_inlines_the_references_a_single_artefact_does(client: TestClient, listing: str) -> None:
+    """A listing's references are the single artefact's, each once.
+
+    They were dropped whole: the enumerator dedups references by URN, built by
+    calling ``type(artefact).urn``, and once sdmxlib made ``urn`` a property
+    nothing could be built, so every reference was skipped as unidentifiable.
+    """
+    one = client.get("/structure/dataflow/AG/DF_POP/1.0", params={"references": "children"}).json()
+    many = client.get(f"/structure/dataflow/{listing}", params={"references": "children"}).json()
+
+    for kind in ("dataStructures", "conceptSchemes", "codelists"):
+        expected = sorted(a["id"] for a in _artefacts(one, kind))
+        assert expected, f"the discrimination check: a single dataflow inlines {kind}"
+        assert sorted(a["id"] for a in _artefacts(many, kind)) == expected, kind
+
+
 def test_latest_resolves_to_the_one_concrete_version(client: TestClient) -> None:
     """``latest`` with a concrete agency+id narrows to a single artefact."""
     resp = client.get("/structure/dataflow/AG/DF_POP/latest")
