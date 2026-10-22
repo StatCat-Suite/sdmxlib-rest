@@ -43,6 +43,13 @@ test:
 test-all:
     uv run pytest
 
+# Unit tests with coverage — the same selection as `just test`, so the number
+# reported is for the tests the gate runs.
+[group('test')]
+coverage:
+    uv run pytest -m unit --cov --cov-report=term-missing --cov-report=xml --cov-report=html
+    @echo "HTML report: htmlcov/index.html"
+
 # The ratios behind milestone 1. Needs a real bundle: the effects that motivate
 # that work do not exist at fixture size, so without SDMXLIB_REST_BENCH_BUNDLE
 # every test skips rather than measuring something meaningless.

@@ -69,16 +69,6 @@ ignore = [
 "__init__.py" = ["E402", "F401", "I"]
 # Tests: skip docstrings, annotations, security checks, and unused-arg checks
 "tests/**/*.py" = ["D", "ANN", "S101", "ARG", "SLF001", "PLC0415"]
-# Examples: standalone scripts — allow print, missing docstrings, implicit namespace
-"examples/**/*.py" = ["T201", "D1", "INP001"]
-# Scripts: same rationale as examples — standalone, print-driven, no package.
-# Also relax style / complexity rules; these are throwaway perf drivers, not
-# production code.
-"scripts/**/*.py" = [
-  "T201", "D", "INP001", "RUF001", "RUF002", "E501", "E701", "E702",
-  "C901", "PLR0915", "PLR0912", "F401", "F541", "ANN", "ARG", "S",
-  "FURB171", "PERF401", "PLC0415", "Q",
-]
 
 [lint.pydocstyle]
 convention = "google"

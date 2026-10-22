@@ -78,7 +78,6 @@ default = true
 testpaths = ["tests"]
 markers = [
   "unit: fast unit tests (no I/O)",
-  "integration: tests that use real DuckDB but no network",
   "bundle: benchmarks against a real bundle (set SDMXLIB_REST_BENCH_BUNDLE); skipped without one",
 ]
 
@@ -93,6 +92,7 @@ skip_covered = false
 dev = [
     "pytest>=9.0.3",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=7.1.0",
     "httpx2>=2.0",
     "ruff>=0.16.1",
     # Capped at the next minor: under `preset = "all"` a pyrefly minor can add
