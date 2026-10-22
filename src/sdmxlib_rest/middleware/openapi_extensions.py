@@ -96,11 +96,13 @@ def apply_vendor_markers(spec: dict[str, Any]) -> dict[str, Any]:
                 continue
             if path_is_vendor:
                 _tag_vendor_operation(op)
-            for param in op.get("parameters", []) or []:
+            params: list[object] = op.get("parameters", []) or []
+            for param in params:
                 if not isinstance(param, dict):
                     continue
-                if param.get("name") in _VENDOR_PARAM_NAMES:
-                    _tag_vendor_param(param)
+                param_obj = cast("dict[str, Any]", param)
+                if param_obj.get("name") in _VENDOR_PARAM_NAMES:
+                    _tag_vendor_param(param_obj)
     return spec
 
 

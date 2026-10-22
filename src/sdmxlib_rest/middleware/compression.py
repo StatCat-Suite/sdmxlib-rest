@@ -63,7 +63,7 @@ def install_isal_zip_backend() -> None:
     # Refresh the import zipstream-ng captured at its own import time.
     import zipstream.ng  # noqa: PLC0415
 
-    zipstream.ng._get_compressor = _isal_get_compressor  # type: ignore[attr-defined]  # noqa: SLF001
+    zipstream.ng._get_compressor = _isal_get_compressor  # noqa: SLF001
     zipfile._sdmxlib_rest_isal_patched = True  # type: ignore[attr-defined]  # noqa: SLF001
 
 
