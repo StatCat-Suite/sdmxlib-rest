@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 # Derived from what the package actually imports, not inherited from the
-# service it was extracted from: no pinaxlib (the catalog is reached through
+# service it was extracted from: no statcatlib (the catalog is reached through
 # the CatalogProvider seam), no uvicorn (serving is the consumer's job).
 dependencies = [
     # 0.70.1, not 0.70: 0.70.0's `obs()` cannot fetch from Eurostat or BIS

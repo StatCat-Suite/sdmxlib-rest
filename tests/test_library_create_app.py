@@ -6,7 +6,7 @@ passing even if ``sdmxlib_rest.create_app`` still secretly needed something
 shaped like it.
 
 So the provider below is deliberately minimal — an in-memory DuckDB and an
-empty catalog, no bundle, no pinax, no consumer import — and the assertions are
+empty catalog, no bundle, no statcatlib, no consumer import — and the assertions are
 about *assembly*, not data: does the app boot, is the middleware stack in the
 invariant order, do mounted surfaces share the one catalog, does the docs page
 list every spec, do the startup/shutdown hooks fire.
@@ -48,7 +48,7 @@ pytestmark = pytest.mark.unit
 
 
 class ToyProvider:
-    """The smallest thing satisfying ``CatalogProvider`` — no bundle, no pinax.
+    """The smallest thing satisfying ``CatalogProvider`` — no bundle, no statcatlib.
 
     ``opens`` counts calls so the mount-sharing test can assert one open serves
     every surface rather than each mount opening its own.

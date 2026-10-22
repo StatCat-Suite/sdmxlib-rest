@@ -6,7 +6,7 @@ formatting delegation to sdmxlib — over an abstract catalog. Consumers
 supply how the catalog is opened, what gets spliced into responses, and any
 catalog-specific speedups.
 
-It MUST NOT import a consumer or ``pinax`` — that separation is the whole point of the boundary, and
+It MUST NOT import a consumer or ``statcatlib`` — that separation is the whole point of the boundary, and
 ``tests/test_library_import_boundary.py`` fails the build if it slips.
 """
 
