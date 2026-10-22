@@ -1,0 +1,147 @@
+# sdmxlib-rest — CLAUDE.md
+
+## What this is
+
+A generic SDMX-REST HTTP surface over a [sdmxlib](../sdmxlib) `LocalRegistry`.
+It owns the parts of an SDMX-REST service that are the same for every catalog —
+URL grammar, content negotiation, localisation, streaming, response assembly —
+and pushes everything catalog-specific behind explicit seams.
+
+Extracted in place from its first consumer service over four phases and split
+out here in the fifth. That history matters: every seam exists because a real
+service needed it, not because it seemed like good architecture. Don't add a
+seam speculatively.
+
+## The rule
+
+**No catalog-specific logic. Ever.** If something needs to know about a
+particular bundle, lake layout, agency, codelist or vendor parameter, it belongs
+in the consumer, behind a seam. The library provides the Protocol and an inert
+default; the consumer provides the implementation.
+
+"Inert, not broken" is the test for a default: a consumer installing none of the
+seams must get a *correct* service, just a slower one.
+
+## Seams
+
+All are Protocols carried on `CatalogRuntime` (`runtime.py`).
+
+`CatalogProvider` is the exception to "everything is a Protocol": it hands back
+an `sl.LocalRegistry` named concretely, because `binding_for` — which every
+data-plane helper needs — exists only there and no sdmxlib Protocol covers it.
+
+| Seam | File | Default |
+|---|---|---|
+| `CatalogProvider` | `provider.py` | **required** |
+| `SpliceRegistry` | `splice.py` | empty |
+| `StructureCache` | `structure_cache.py` | `NullStructureCache` |
+| `AvailabilityValues` | `availability_values.py` | `NullAvailabilityValues` |
+| `MetadataStore` | `metadata_store.py` | `NullMetadataStore` |
+| `ComponentFilterShaper` | `filter_shaper.py` | `NullComponentFilterShaper` |
+| `MessageAnnotator` | `message_annotator.py` | `NullMessageAnnotator` |
+
+## Layout
+
+```
+src/sdmxlib_rest/
+    app.py               # create_app — middleware stack, mounts, multi-spec /docs
+    runtime.py           # CatalogRuntime + request deps (get_registry, get_meta_conn, ...)
+    provider.py          # CatalogProvider / OpenedCatalog
+    splice.py            # post-serialise JSON transform pipeline
+    negotiation.py       # Accept / content negotiation
+    localization.py      # Accept-Language localisation
+    structure_cache.py   metadata_store.py   availability_values.py  filter_shaper.py
+    data/                # data-plane HELPERS (not the route — see below)
+        params.py        # c[] filters, sort, dimensionAtObservation, id patterns
+        projection.py    # attributes=/measures= projection, key_dimension_ids
+        encoding.py      # SDMX-CSV+labels, BOM, streaming zip, streaming parquet
+        paging.py        # Range request -> Content-Range response headers
+        sql.py           # binding-driven SQL fragments (DECIMALS precision, QUALIFY)
+    routes/
+        structure.py     metadata.py     availability.py
+    middleware/          # etag, compression, head_method, lang_override,
+                         # version_token, query_param_guard, perf_log, openapi_extensions
+    responses/           # asof, empty (204), availability (render from value lists),
+                         # unwritable (sdmxlib ValidationError -> 500 naming artefact + rule)
+```
+
+## The data plane
+
+**The library owns data-plane *helpers*; consumers own the `/data` route.**
+
+Orchestration is where response caching, partition pushdown and vendor
+extensions live, and every catalog shapes those differently. A consumer gets the
+fiddly parts — key parsing, projection, paging headers, SQL fragments, the
+arrow→CSV/parquet encoders — and writes its own handler around them.
+
+`/availability` is the one library route that reads observations, and it does
+so through sdmxlib's query DSL (`registry.observations(flow)`), not SQL of its
+own (#6). So a provider's registry must reach its lake on its own connection;
+`meta_conn` is only for consumers' seams. The DSL builds one query root per
+request, ~13–19 ms on a large census bundle (sdmxlib#426); don't cache roots
+across requests, since a root binds the constructing thread's cursor.
+
+Resist requests to "just add a data route". It was considered and rejected with
+a quantitative inventory of what each consumer's handler does.
+
+## The URL grammar is SDMX-REST 2.2.2, and only that
+
+Every published path is 2.2.2 shape. That is not incidental — it settles what a
+dotted key means. 2.2.2 makes the time dimension a **key slot**, so a key is
+parsed against `dsd.key_slot_ids("3.0")` and a short key is a 400, not a
+truncation to pad out.
+
+SDMX-REST 1.5/2.1 keeps time *out* of the key (`startPeriod` / `endPeriod`
+filter it instead), so a 1.5 key is one segment shorter for the same DSD.
+Reading one against the other's slot list does not error — it shifts every
+value one slot and answers confidently wrong.
+
+**A 1.5 surface is a consumer's forwarder**, translating the older grammar
+before it reaches these routes. The forwarder knows which generation it serves;
+a route that only serves one does not need to be told, which is why `ApiVersion`
+is not threaded through the data plane. `AvailabilityKey` keys on the resolved
+flow URN rather than the request path, so a forwarder's path shape cannot
+collide two flows, and the 1.5 and 2.2.2 surfaces share one precomputed entry.
+
+Individual 1.5 *conveniences* are backported onto the 2.2.2 routes where they
+cost nothing — the `all` wildcard, `startPeriod`/`endPeriod`, the
+no-`componentID` form. Those are spellings, not a second grammar.
+
+## The middleware ordering invariant
+
+`_install_middleware` in `app.py` builds a chain whose adjacencies each have a
+real failure mode — an ETag over compressed bytes, a `?lang=` that hashes wrong,
+a CORS preflight falling through to a 404. The docstring documents each one.
+**Read it before touching the order.** `tests/test_library_create_app.py` pins
+the sequence; that assertion is deliberate, not incidental.
+
+## Style
+
+- Docstrings: Google convention. Skip docstrings on trivial getters.
+- No comments that restate the code. Only WHY-comments.
+- Conventional commits — `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
+- Tests are plain functions; module-level `pytestmark = pytest.mark.unit`.
+
+## Common commands
+
+```bash
+just check     # ruff + basedpyright + pyrefly
+just test      # unit tests
+just ci        # full gate
+just pyrefly   # the second-opinion type check alone (also part of `check`)
+just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not in `ci`
+```
+
+## Versioning
+
+Versions independently of any consumer — a consumer pins a range and upgrades
+deliberately. Pre-1.0, breaking a seam Protocol is a minor bump; after 1.0 it is
+a major. `just release-1-preview` through `release-4-push`. git-cliff drafts
+the changelog entry (steps 1-2); step 4 publishes the *curated* CHANGELOG.md
+section, not the regenerated one.
+
+## Related repos
+
+- `../sdmxlib` — the domain model and `LocalRegistry` this sits on top of.
+- `../pinax` — `Catalog` bundle format a consumer's provider may open. Not a
+  dependency here, and must never become one.

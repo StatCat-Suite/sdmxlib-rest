@@ -1,0 +1,40 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# macOS Finder metadata
+.DS_Store
+
+# Virtual environments
+.venv
+
+# uv lockfile — sdmxlib is a published library; downstream consumers
+# resolve against pyproject.toml. Committing the lockfile would leak
+# whichever index the local environment used (e.g. a private mirror).
+uv.lock
+
+# Local env / secrets
+.env
+.envrc
+
+# MkDocs generated site
+site/
+public/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Benchmark baselines — local snapshots, not part of the repo
+bench/baselines/
+.benchmarks/
+
+# Claude Code: shared project settings are tracked (.claude/settings.json —
+# it carries the suppression-policy hook); per-developer permission grants
+# are not.
+.claude/settings.local.json

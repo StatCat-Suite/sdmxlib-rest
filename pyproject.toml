@@ -1,0 +1,109 @@
+[project]
+name = "sdmxlib-rest"
+version = "0.6.2"
+description = "Generic SDMX-REST HTTP surface over a sdmxlib LocalRegistry"
+readme = "README.md"
+# PEP 639 form. The deprecated `license = { text = ... }` table populates the
+# legacy `License:` field that some per-component scanners still read, but it is
+# mutually exclusive with `license-files` — and Apache-2.0 §4 requires shipping
+# the license text, which only `license-files` does. Compliance wins; scanners
+# that need the legacy field can read `License-Expression:` or the classifier.
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "gabrielgellner", email = "gabrielgellner@gmail.com" }]
+requires-python = ">=3.13"
+keywords = ["sdmx", "sdmx-rest", "fastapi", "statistical-data", "api"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+# Derived from what the package actually imports, not inherited from the
+# service it was extracted from: no pinaxlib (the catalog is reached through
+# the CatalogProvider seam), no uvicorn (serving is the consumer's job).
+dependencies = [
+    "sdmxlib>=0.65,<0.68",
+    "attrs>=24",
+    "fastapi>=0.115",
+    "starlette>=0.40",
+    # Nothing is tested below 1.5.5, and nothing can resolve below it either:
+    # sdmxlib requires `duckdb>=1.5.5` and is a hard dependency, so the floor
+    # here is a statement of what we support rather than inherited luck. No
+    # upper bound — sdmxlib's runtime scan-integrity guard refuses a store whose
+    # scans lose rows whatever version is installed, so a DuckDB upgrade is a
+    # performance decision, not a correctness risk (their #400 measured the
+    # "1.5.3 regression" across 1.5.0 to 1.6.0.dev and found every build alike).
+    "duckdb>=1.5.5",
+    "polars>=1.39",
+    "pyarrow>=18",
+    "orjson>=3.11",
+    "loguru>=0.7",
+    # Streaming zip + a faster DEFLATE backend for the CSV export path.
+    "isal>=1.8.0",
+    "zipstream-ng>=1.9.2",
+]
+
+[project.urls]
+Homepage = "https://gitlab.com/pinax-suite/sdmxlib-rest"
+Repository = "https://gitlab.com/pinax-suite/sdmxlib-rest"
+"Issue Tracker" = "https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues"
+Changelog = "https://gitlab.com/pinax-suite/sdmxlib-rest/-/blob/main/CHANGELOG.md"
+
+[build-system]
+# uv_build ships in lockstep with uv, so this range tracks uv's minors rather
+# than naming a version. The upper bound is real: uv_build is pre-1.0 and its
+# minors may change build behaviour, so a consumer building the sdist should
+# get a backend this package has been built with — but pinning a single minor
+# means the bound goes stale every uv release and anyone on a newer uv builds
+# with a backend the metadata says is unsupported.
+requires = ["uv_build>=0.11.6,<0.13.0"]
+build-backend = "uv_build"
+
+# Pin the index to public PyPI at the project level so the lock file is
+# portable — a host's user-level uv.toml may point at an authenticated mirror,
+# which is fine interactively but absent in CI and container builds.
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "unit: fast unit tests (no I/O)",
+  "integration: tests that use real DuckDB but no network",
+  "bundle: benchmarks against a real bundle (set SDMXLIB_REST_BENCH_BUNDLE); skipped without one",
+]
+
+[tool.coverage.run]
+source = ["src/sdmxlib_rest"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.basedpyright]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+exclude = [".venv"]
+reportAny = "none"
+reportExplicitAny = "none"
+reportUnknownVariableType = "none"
+reportUnknownMemberType = "none"
+reportUnknownArgumentType = "none"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.38.4",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.28",
+    "ruff>=0.16.1",
+    "pyrefly>=1.2.0",
+]

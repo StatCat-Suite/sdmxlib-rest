@@ -1,0 +1,36 @@
+# Mirrors ../sdmxlib's pipeline, minus the docs/pages stages (no mkdocs here
+# yet). `python:3.13-slim` rather than 3.12 — this package requires >=3.13.
+default:
+  image: python:3.13-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl
+    - pip install uv --quiet
+    - curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin --tag 1.46.0
+    - uv sync --group dev
+
+variables:
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
+
+cache:
+  key:
+    prefix: "v1"
+    files:
+      - pyproject.toml
+  paths:
+    - .uv-cache/
+
+stages:
+  - quality
+
+# Unlike sdmxlib's manual jobs these run automatically. This package no longer
+# has a consumer's suite exercising it on every change, so the pipeline is the
+# only thing standing between a bad merge and a release.
+check:
+  stage: quality
+  script:
+    - just check
+
+test:
+  stage: quality
+  script:
+    - just test
