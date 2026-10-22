@@ -43,7 +43,7 @@ them gets a correct service, just one that recomputes more than it needs to.
 **The registry has to reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
 registry's own connection and attaches the lake there. Open a bundle with
-`LocalRegistry.bundle(path)`, or any opener that does the same (pinax's
+`LocalRegistry.bundle(path)`, or any opener that does the same (statcatlib's
 `Catalog` does). A lake attached only to some other connection is invisible to
 it. Since 0.6.0; before, `/availability` ran its own SQL on `meta_conn`.
 

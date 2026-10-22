@@ -9,7 +9,7 @@ and an opaque build manifest.
 **The registry must reach its own observations.** ``/availability`` reads
 rows through ``registry.obs(flow)``, sdmxlib's query DSL, which runs
 on the registry's own connection and attaches the lake there itself. A
-registry opened with ``LocalRegistry.bundle(path)`` does; so does pinax's
+registry opened with ``LocalRegistry.bundle(path)`` does; so does statcatlib's
 ``Catalog``. A lake attached only to some other connection is invisible to it.
 ``meta_conn`` is no longer what any library route queries: it is handed to a
 consumer's seams (``ComponentFilterShaper`` via ``FilterContext.conn``,
@@ -48,7 +48,7 @@ class OpenedCatalog:
     """A live registry plus its meta connection and build manifest.
 
     Returned by :meth:`CatalogProvider.open`. ``close`` runs the
-    provider-supplied teardown (e.g. closing the pinax ``Catalog``); it is
+    provider-supplied teardown (e.g. closing a statcatlib ``Catalog``); it is
     a no-op when the provider passes none.
     """
 

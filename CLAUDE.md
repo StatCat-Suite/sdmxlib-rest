@@ -157,5 +157,5 @@ regenerated one.
 ## Related repos
 
 - `../sdmxlib` — the domain model and `LocalRegistry` this sits on top of.
-- `../pinax` — `Catalog` bundle format a consumer's provider may open. Not a
-  dependency here, and must never become one.
+- `../statcatlib` (formerly pinax) — `Catalog` bundle format a consumer's
+  provider may open. Not a dependency here, and must never become one.
