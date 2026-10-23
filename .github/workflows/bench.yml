@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       shape:
-        description: "Shape under tests/bench/shapes/"
+        description: "Shape under tests/bench/shapes/: large, or census (about 2 min to build)"
         default: large
       seed:
         description: "Seed for synthetic_bundle"
