@@ -107,6 +107,36 @@ class CatalogRuntime:
         """ISO-8601 build timestamp of the open bundle, or ``""`` if not open (non-forcing)."""
         return self._opened.built_at if self._opened is not None else ""
 
+    @property
+    def token(self) -> str:
+        """What every cache and the ETag key on, or ``""`` if not open (non-forcing).
+
+        The provider's ``token`` if it set one, else the sdmxlib bundle
+        manifest's (new at every publication), else ``build_id``.
+        """
+        if self._opened is None:
+            return ""
+        if self._opened.token:
+            return self._opened.token
+        manifest = self._opened.registry.manifest
+        return manifest.token if manifest is not None else self._opened.build_id
+
+    @property
+    def last_modified(self) -> str:
+        """ISO-8601 ``Last-Modified`` source, or ``""`` if not open (non-forcing).
+
+        Follows ``token``: when the token is the sdmxlib manifest's, so is the
+        timestamp. A provider's ``built_at`` can stay put across a republish
+        that minted a new token, and an ``If-Modified-Since`` would then 304 a
+        stale body that the ETag correctly misses.
+        """
+        if self._opened is None:
+            return ""
+        if self._opened.token:
+            return self._opened.built_at
+        manifest = self._opened.registry.manifest
+        return manifest.created_at.isoformat() if manifest is not None else self._opened.built_at
+
     def close(self) -> None:
         """Release the opened registry, if any; the runtime can be re-opened after."""
         if self._opened is not None:
@@ -149,6 +179,11 @@ def get_splices(request: Request) -> SpliceRegistry:
 def get_build_id(request: Request) -> str:
     """FastAPI dependency: the open bundle's build id (``""`` before open)."""
     return get_runtime(request).build_id
+
+
+def get_token(request: Request) -> str:
+    """FastAPI dependency: what caches key on for the open bundle (``""`` before open)."""
+    return get_runtime(request).token
 
 
 def get_structure_cache(request: Request) -> StructureCache:

@@ -55,13 +55,15 @@ class OpenedCatalog:
     registry: sl.LocalRegistry
     meta_conn: duckdb.DuckDBPyConnection
     manifest: object | None = None
-    # Build identity — the generic bits of the manifest the library itself
-    # needs for ETag / cache keys. The provider derives these from its concrete
-    # manifest; the library reads them without introspecting the opaque
-    # ``manifest`` object. ``build_id`` uniquely names an immutable bundle
-    # build; ``built_at`` is its ISO-8601 timestamp (Last-Modified source).
+    # Build identity, from the provider's own manifest: ``build_id`` names the
+    # bundle build (for logs), ``built_at`` is its ISO-8601 timestamp.
     build_id: str = ""
     built_at: str = ""
+    # What caches and the ETag key on. Empty means the registry's sdmxlib
+    # manifest token, else ``build_id``: a producer may keep ``build_id`` across
+    # a metadata-only rebuild, but a publication always mints a new token. Set
+    # it only to key on something other than the manifest.
+    token: str = ""
     on_close: Callable[[], None] | None = field(default=None, repr=False)
 
     def close(self) -> None:

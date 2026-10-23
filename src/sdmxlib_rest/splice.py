@@ -46,7 +46,7 @@ class SpliceContext:
 
     registry: sl.LocalRegistry
     conn: duckdb.DuckDBPyConnection
-    build_id: str
+    token: str
     agency_id: str = ""
     resource_id: str = ""
     version: str = ""

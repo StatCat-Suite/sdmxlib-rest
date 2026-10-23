@@ -20,12 +20,12 @@ from sdmxlib_rest.negotiation import ensure_acceptable, is_browser_request
 from sdmxlib_rest.responses.asof import AsOf, reject_asof
 from sdmxlib_rest.responses.empty import to_204_if_empty
 from sdmxlib_rest.runtime import (
-    get_build_id,
     get_message_annotator,
     get_meta_conn,
     get_registry,
     get_splices,
     get_structure_cache,
+    get_token,
 )
 from sdmxlib_rest.splice import SpliceContext, SpliceRegistry, run_structure_splices
 from sdmxlib_rest.structure_cache import StructureCache, StructureQuery
@@ -358,7 +358,7 @@ async def get_structure(
     ],
     registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
-    build_id: Annotated[str, Depends(get_build_id)],
+    token: Annotated[str, Depends(get_token)],
     splices: Annotated[SpliceRegistry, Depends(get_splices)],
     cache: Annotated[StructureCache, Depends(get_structure_cache)],
     annotator: Annotated[MessageAnnotator, Depends(get_message_annotator)],
@@ -426,7 +426,7 @@ async def get_structure(
 
         # Consumer-owned response cache (a pod-lifetime speedup for expensive
         # shapes — large codelists, slow-to-materialise hierarchies). The bundle is
-        # immutable per ``build_id`` so cached bytes are stable for the pod
+        # fixed per publication (``token``), so cached bytes are stable for the process
         # lifetime; a bare catalog gets the no-op cache and always renders.
     cache_query = StructureQuery(
         structure_type=structureType,
@@ -437,7 +437,7 @@ async def get_structure(
         references=references,
         accept=accept,
         accept_language=accept_language,
-        build_id=build_id,
+        token=token,
     )
     cached = cache.lookup(cache_query)
     if cached is not None:
@@ -483,7 +483,7 @@ async def get_structure(
         # splice can touch. A consumer can use this for the .Stat-compat METADATA annotation
         # that drives Explorer's Overview metadata discovery; the default annotator
         # is a no-op. Runs before both the XML and JSON branches below.
-    msg = annotator.annotate(msg, registry=registry, conn=conn, build_id=build_id)
+    msg = annotator.annotate(msg, registry=registry, conn=conn, token=token)
 
     accept_lower = (accept or "").lower()
     # Browsers send `text/html,application/xhtml+xml,application/xml;q=0.9,…`.
@@ -519,7 +519,7 @@ async def get_structure(
     ctx = SpliceContext(
         registry=registry,
         conn=conn,
-        build_id=build_id,
+        token=token,
         agency_id=agencyID,
         resource_id=resourceID,
         version=version,
