@@ -89,8 +89,16 @@ def test_stub_of_still_stubs_an_artefact_that_has_no_lazy_wrapper(world: World) 
 def test_references_children_lists_codelists_without_materialising_one(
     client: TestClient, materialised: list[str]
 ) -> None:
-    """The issue's own case: a dataflow with ``references=children``."""
-    resp = client.get("/structure/dataflow/AG/DF_POP/1.0", params={"references": "children"})
+    """The issue's own case: a dataflow with ``references=children``, stubs asked for.
+
+    It used to ask at the default ``detail=full``, when references were stubbed
+    whatever ``detail`` said. Since GH-32 ``full`` returns them in full, so the
+    no-codes promise belongs to the stub details: ``referencestubs`` here, and
+    ``allcompletestubs`` in the shape .Stat sends.
+    """
+    resp = client.get(
+        "/structure/dataflow/AG/DF_POP/1.0", params={"references": "children", "detail": "referencestubs"}
+    )
 
     assert resp.status_code == 200
     codelists = resp.json()["data"].get("codelists", [])

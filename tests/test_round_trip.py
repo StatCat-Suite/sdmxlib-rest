@@ -53,7 +53,13 @@ FORMATS = {
 #: (path, params, whether codelists come back as stubs). The two stub routes are
 #: the ones #9 touched; the full codelist is the control that codes survive too.
 ROUTES: dict[str, tuple[str, dict[str, str], bool]] = {
-    "structure-references-children": ("/structure/dataflow/AG/DF_POP/1.0", {"references": "children"}, True),
+    "structure-references-children": (
+        "/structure/dataflow/AG/DF_POP/1.0",
+        {"references": "children", "detail": "referencestubs"},
+        True,
+    ),
+    # Since GH-32, `detail=full` returns the referenced codelists in full.
+    "structure-references-children-full": ("/structure/dataflow/AG/DF_POP/1.0", {"references": "children"}, False),
     "availability-references-codelist": (
         "/availability/dataflow/AG/DF_POP/1.0/all/all",
         {"references": "codelist"},

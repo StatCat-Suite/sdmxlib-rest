@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
 import duckdb
@@ -236,7 +237,8 @@ _VERSION_EXAMPLES: dict[str, Example] = {
 #   allcompletestubs           implemented — alias of allstubs in our serialiser; both
 #                                produce header + name + description (no items)
 #   referencestubs             implemented — queried artefact full + referenced artefacts
-#                                stubbed (walks dataflow → DSD → all codelists)
+#                                stubbed (walks dataflow → DSD → all codelists);
+#                                `full` returns the same references in full
 #   referencecompletestubs     implemented — same walk, stubs keep name + description
 #   referencepartial           approximated as referencestubs — strict version needs a
 #                                per-component "items actually used in data" join (#11);
@@ -280,8 +282,9 @@ _DETAIL_EXAMPLES: dict[str, Example] = {
 # `dataflow`, `codelist`, …) to filter the walk to that type. .Stat
 # Explorer probes a lot of these — accept any string and dispatch:
 #   children                   implemented (Dataflow → DSD)
-#   descendants / all          approximated as the referencestubs walk
-#                                (DSD + every codelist the DSD references)
+#   descendants / all          DSD + every codelist, concept scheme and
+#                                hierarchy the DSD references; in full for
+#                                detail=full, as stubs otherwise (GH-32)
 #   none / parents / parentsandsiblings  return only the queried artefact;
 #                                this single-layer bundle has no real parent
 #                                links to walk back up.
@@ -379,7 +382,9 @@ async def get_structure(
         str,
         Query(
             description=(
-                "Per SDMX-REST 2.2.2. `none` (default), `children`, `descendants`, `all` are honoured; "
+                "Per SDMX-REST 2.2.2. `none` (default), `children`, `descendants`, `all` are honoured, "
+                "returning referenced artefacts in full for `detail=full` and as stubs for the stub "
+                "and `reference*` details; "
                 "`parents` / `parentsandsiblings` walk up where the catalogue models them. Any "
                 "artefact-type token (e.g. `contentconstraint`, `dataflow`) is accepted for spec compat "
                 "but currently behaves as `none`."
@@ -761,6 +766,11 @@ def _stub_of(artefact: object) -> object:
     return stub if stub is not None else _stub(_materialize(artefact))
 
 
+#: How a walker returns each referenced artefact: `_materialize` for
+#: ``detail=full``, `_stub_of` for every other detail.
+type _Shape = Callable[[object], object]
+
+
 def _resolve_extras(
     artefact: object,
     references: str,
@@ -775,21 +785,25 @@ def _resolve_extras(
     (`referencestubs` etc) imply `references=descendants` by default if the
     caller didn't pass one, which is the spec contract.
 
-    When `detail` is in the stub bucket, every related artefact is also
-    stubbed — that's what `detail=allcompletestubs&references=children`
-    means: the whole response is stubs.
+    With `detail=full` the related artefacts the walkers reach are returned in
+    full, as the spec says (GH-32). Every other `detail` returns them as
+    stubs, built from the lazy wrapper so no item tree is read. When `detail`
+    is in the stub bucket, every related artefact is stubbed — that's what
+    `detail=allcompletestubs&references=children` means: the whole response is
+    stubs.
     """
     extras: list[object]
     effective = references or "none"
     if effective in (None, "", "none") and detail in _DETAIL_REFERENCE_BUCKET:
         effective = "descendants"
+    shape = _materialize if detail == "full" else _stub_of
 
     if effective in _REFERENCES_CHILDREN_BUCKET:
-        extras = _resolve_children(artefact, registry)
+        extras = _resolve_children(artefact, registry, shape)
     elif effective in _REFERENCES_DESCENDANT_BUCKET:
-        extras = _walk_references_as_stubs(artefact, registry)
+        extras = _walk_descendants(artefact, registry, shape)
     elif effective in _REFERENCES_PARENTS_BUCKET:
-        extras = _resolve_parents_and_siblings(artefact, registry)
+        extras = _resolve_parents_and_siblings(artefact, registry, shape)
     elif effective == "dataflow" and isinstance(artefact, sl.CategoryScheme):
         # SDMX-REST 2.2.2: ``references=<artefact-type>`` returns every
         # artefact of that type that references (or is referenced by) the
@@ -846,12 +860,13 @@ def _resolve_dataflows_referencing_scheme(
     return out
 
 
-def _resolve_children(artefact: object, registry: sl.LocalRegistry) -> list[object]:
+def _resolve_children(artefact: object, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
     """Resolve the artefacts that ``references=children`` should inline.
 
     For a Dataflow we return the full transitive set the consumer needs to
     render a UI: the DSD at full detail, plus every codelist and concept
-    scheme referenced by the DSD's components as stubs. Strict SDMX-REST
+    scheme referenced by the DSD's components, shaped by ``shape`` (in full
+    for ``detail=full``, else as stubs). Strict SDMX-REST
     "children" is one hop (Dataflow → DSD), but every major SDMX server
     (Fusion Registry, OECD .Stat NSI WS) treats Dataflow children this way
     in practice — without the codelists + concept schemes, .Stat's
@@ -869,12 +884,12 @@ def _resolve_children(artefact: object, registry: sl.LocalRegistry) -> list[obje
             return refs
         refs.append(dsd)
         if isinstance(dsd, sl.DataStructure):
-            refs.extend(_walk_dsd_outbound_refs(dsd, registry))
+            refs.extend(_walk_dsd_outbound_refs(dsd, registry, shape))
         return refs
     return []
 
 
-def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry) -> list[object]:
+def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
     """Resolve `references=parents` / `parentsandsiblings`.
 
     Strict SDMX-REST defines "parents" of a Dataflow as the Categorisations
@@ -883,7 +898,9 @@ def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry) 
 
     - every other Dataflow in the registry (as siblings — loose, since
       they're not strictly in the same category, but it's what DLM shows)
-    - the linked DSD (stubbed)
+    - the linked DSD
+
+    each shaped by ``shape``.
 
     Other artefact classes return [] — siblings of a Codelist or
     ConceptScheme aren't meaningful in this flat catalogue.
@@ -898,37 +915,37 @@ def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry) 
         other_urn = sl.Dataflow.urn_for(agency=other_agency, id=other.id, version=other.version)
         if str(other_urn) == str(self_urn):
             continue
-        refs.append(_stub_of(other))
+        refs.append(shape(other))
     if artefact.structure is not None:
         dsd = registry.get(artefact.structure.urn)
         if dsd is not None:
-            refs.append(_stub_of(dsd))
+            refs.append(shape(dsd))
     return refs
 
 
-def _walk_references_as_stubs(
+def _walk_descendants(
     artefact: object,
     registry: sl.LocalRegistry,
+    shape: _Shape,
 ) -> list[object]:
-    """Walk the artefact's reference graph and return each ref stubbed.
+    """Walk the artefact's reference graph, shaping each ref with ``shape``.
 
-    For ``detail=referencestubs`` / ``referencecompletestubs``: the queried
-    artefact is returned at full detail (the caller), and every referenced
-    artefact is returned alongside it as a stub. We walk:
+    For ``references=descendants`` / ``all``, and the ``reference*`` detail
+    buckets that imply it. ``shape`` returns each referenced artefact in full
+    for ``detail=full`` and as a stub otherwise. We walk:
 
-    - Dataflow → DataStructure (stubbed) → every codelist + concept scheme
-      referenced by its dimensions and attributes.
+    - Dataflow → DataStructure → every codelist + concept scheme referenced
+      by its dimensions and attributes.
     - DataStructure → same outbound walk (codelists + concept schemes).
     - Other artefact classes have no outgoing references to walk.
 
-    Codelists and concept schemes are looked up in the registry and
-    stubbed via the lazy/concrete path so heavy item trees (large
-    geography codelists, etc.) don't materialise.
+    A stub is built from the lazy wrapper, so heavy item trees (very large
+    geography codelists, etc.) are read only when ``detail=full`` asks for them.
     """
     refs: list[object] = []
-    dsd = _resolve_dsd_for_ref_walk(artefact, registry, refs)
+    dsd = _resolve_dsd_for_ref_walk(artefact, registry, refs, shape)
     if dsd is not None:
-        refs.extend(_walk_dsd_outbound_refs(dsd, registry))
+        refs.extend(_walk_dsd_outbound_refs(dsd, registry, shape))
         # SDMX-REST 2.2.2: a Dataflow's ``references=all`` walk includes every
         # Categorisation whose source is this dataflow, plus the pruned
         # CategoryScheme the target category lives under. sfs's crawl reads this
@@ -977,8 +994,8 @@ def _walk_dataflow_categorisations(dataflow: sl.Dataflow, registry: sl.LocalRegi
     return out
 
 
-def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.LocalRegistry) -> list[object]:
-    """Stubbed Codelists + ConceptSchemes + HierarchyAssociations + Hierarchies referenced by ``dsd``.
+def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
+    """Codelists + ConceptSchemes + HierarchyAssociations + Hierarchies referenced by ``dsd``, shaped.
 
     ``DSD.all_codelists`` gives every codelist referenced by a component's
     representation. Concept schemes have no equivalent accessor on the DSD
@@ -1005,10 +1022,10 @@ def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.LocalRegistry) -
             id=codelist.id,
             version=codelist.version,
         )
-        _append_stub_by_urn(cl_urn, registry, refs, seen)
+        _append_by_urn(cl_urn, registry, refs, seen, shape)
     for cs_urn in _concept_scheme_urns_for_dsd(dsd):
-        _append_stub_by_urn(cs_urn, registry, refs, seen)
-    _append_hierarchy_associations_for_dsd(dsd, registry, refs, seen)
+        _append_by_urn(cs_urn, registry, refs, seen, shape)
+    _append_hierarchy_associations_for_dsd(dsd, registry, refs, seen, shape)
     return refs
 
 
@@ -1017,8 +1034,9 @@ def _append_hierarchy_associations_for_dsd(
     registry: sl.LocalRegistry,
     refs: list[object],
     seen: set[str],
+    shape: _Shape,
 ) -> None:
-    """Append each HierarchyAssociation bound to this DSD's dimensions + its target Hierarchy."""
+    """Append each HierarchyAssociation bound to this DSD's dimensions + its target Hierarchy, shaped."""
     dim_ids = {dim.id for dim in dsd.dimensions if dim.id}
     # Encode the DSD coordinates once so we can quickly accept-or-reject each
     # HA's ``linked_object`` URN. The URN shape is
@@ -1044,13 +1062,13 @@ def _append_hierarchy_associations_for_dsd(
         ha_key = str(sl.HierarchyAssociation.urn_for(agency=ha.agency_id, id=ha.id, version=ha.version))
         if ha_key not in seen:
             seen.add(ha_key)
-            refs.append(_stub_of(ha))
+            refs.append(shape(ha))
             # The Hierarchy it points at, via the registry — lazy stub keeps the
             # tree out of the structure response (.Stat reads the SDMX 2.1
             # /hierarchicalcodelist endpoint for the actual codes).
         hier_urn = getattr(linked_hierarchy, "urn", None)
         if hier_urn is not None:
-            _append_stub_by_urn(hier_urn, registry, refs, seen)
+            _append_by_urn(hier_urn, registry, refs, seen, shape)
 
 
 def _concept_scheme_urns_for_dsd(dsd: sl.DataStructure) -> list[sl.SdmxUrn[sl.ConceptScheme]]:
@@ -1077,6 +1095,7 @@ def _resolve_dsd_for_ref_walk(
     artefact: object,
     registry: sl.LocalRegistry,
     refs: list[object],
+    shape: _Shape,
 ) -> sl.DataStructure | None:
     """Pick the DSD whose codelists/concepts we should walk; append it to ``refs`` if reached via Dataflow."""
     if isinstance(artefact, sl.DataStructure):
@@ -1086,18 +1105,19 @@ def _resolve_dsd_for_ref_walk(
         if dsd is None:
             return None
         if isinstance(dsd, sl.DataStructure):
-            refs.append(_stub(dsd))
+            refs.append(shape(dsd))
             return dsd
     return None
 
 
-def _append_stub_by_urn(
+def _append_by_urn(
     urn: sl.SdmxUrn[object],
     registry: sl.LocalRegistry,
     refs: list[object],
     seen: set[str],
+    shape: _Shape,
 ) -> None:
-    """Look up ``urn`` in the registry, stub it via the lazy fast path, append once."""
+    """Look up ``urn`` in the registry, shape it, append once."""
     key = str(urn)
     if key in seen:
         return
@@ -1105,7 +1125,7 @@ def _append_stub_by_urn(
     art = registry.get(urn)
     if art is None:
         return
-    refs.append(_stub_of(art))
+    refs.append(shape(art))
 
 
 def _build_message(primary: object, extras: list[object]) -> StructureMessage:
