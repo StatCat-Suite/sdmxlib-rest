@@ -118,7 +118,7 @@ def render_availability(
         regions=(CubeRegion(include=True, keys=tuple(key_values)),),
         annotations=Annotations([Annotation(id="obs_count", title=str(obs_count), type="sdmx_metrics")]),
     )
-    # acreferences walk (closes #24): per requested artefact-type token, add the
+    # acreferences walk: per requested artefact-type token, add the
     # named related artefacts to the StructureMessage alongside the constraint so
     # one response carries everything a client needs to render a value picker
     # (codelists for labels, concept schemes for descriptions, etc.).
@@ -132,7 +132,7 @@ def render_availability(
     )
 
     # 204 No Content when the cube region is empty — the partial key plus filters
-    # matched zero rows (closes #32). The constraint envelope still exists
+    # matched zero rows. The constraint envelope still exists
     # conceptually; 204 tells strict clients there is nothing to render.
     if obs_count == 0:
         return Response(status_code=204)

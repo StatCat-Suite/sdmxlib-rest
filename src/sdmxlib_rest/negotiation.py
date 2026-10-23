@@ -111,7 +111,7 @@ def ensure_acceptable(accept: str | None, supported: list[str]) -> None:
       claim a specific SDMX media type. Lets generic clients sending
       ``text/csv`` / ``application/xml`` etc. still hit our SDMX-typed
       equivalents, while strict spec clients naming an SDMX type
-      version we don't produce get the 406 they're owed (closes #33).
+      version we don't produce get the 406 they're owed.
     """
     if not accept:
         return

@@ -1,4 +1,4 @@
-"""A second consumer can stand up an SDMX-REST service through the library alone (#35).
+"""A second consumer can stand up an SDMX-REST service through the library alone.
 
 This was the definition-of-done for the extraction, and the only test that
 would catch it being fake: a suite driving the first consumer's app would keep

@@ -1,6 +1,6 @@
 """Fail on the prose constructions CLAUDE.md's "Writing style" rules forbid (GH-55).
 
-Ported from sdmxlib (StatCat-Suite/sdmxlib#84 and #85), as statcatlib and the
+Ported from sdmxlib (StatCat-Suite/sdmxlib#84 and StatCat-Suite/sdmxlib#85), as statcatlib and the
 docs hub did; the phrase list is sdmxlib's, unchanged, since the style section
 is shared.
 

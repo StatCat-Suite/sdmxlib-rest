@@ -52,8 +52,8 @@ _GLOBAL_VENDOR_PARAMS: Final[frozenset[str]] = frozenset(
 # DLM, for instance, attach ``dimensionAtObservation=AllDimensions`` to
 # every request including structure + availability fetches; ``format``
 # similarly stands in for ``Accept`` on some legacy clients. We accept
-# them as global no-ops rather than 400 (the spec-compliance goal of #34
-# is catching *typos* like ``detial`` — a known spec keyword on the
+# them as global no-ops rather than 400 (the guard exists to catch
+# *typos* like ``detial`` — a known spec keyword on the
 # "wrong" endpoint is a permissible client habit, not a bug).
 #
 # Handler-level declaration still wins where the param has actual
@@ -63,8 +63,8 @@ _GLOBAL_NOOP_PARAMS: Final[frozenset[str]] = frozenset(
     {
         "dimensionAtObservation",
         "format",
-        # ``?lang=<tag>`` overrides Accept-Language via LangOverrideMiddleware
-        # (issue #72). The middleware consumes it before routing, so from a
+        # ``?lang=<tag>`` overrides Accept-Language via LangOverrideMiddleware.
+        # The middleware consumes it before routing, so from a
         # route's POV it's a no-op; declare here so the query-param guard
         # doesn't 400 on it.
         "lang",
