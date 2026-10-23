@@ -1,6 +1,6 @@
 [project]
 name = "sdmxlib-rest"
-version = "0.6.4"
+version = "0.7.0"
 description = "Generic SDMX-REST HTTP surface over a sdmxlib LocalRegistry"
 readme = "README.md"
 # PEP 639 form. The deprecated `license = { text = ... }` table populates the
