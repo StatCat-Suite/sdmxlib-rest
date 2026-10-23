@@ -1,6 +1,6 @@
 """SQL fragment builders driven by the dataflow binding.
 
-These shape the generated query rather than parse the request. Each one is
+These shape the generated query. Each one is
 binding-driven and degrades to a no-op when the columns it needs are absent,
 so a catalog that doesn't model them pays nothing.
 """

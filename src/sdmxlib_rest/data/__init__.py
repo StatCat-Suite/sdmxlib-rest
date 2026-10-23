@@ -1,13 +1,11 @@
 """Generic building blocks for an SDMX-REST data plane.
 
-The library deliberately does **not** own the ``/data`` route: orchestration
-is where catalog-specific caching, partition pushdown and vendor extensions
-live, and every catalog shapes those differently. What it does own is the
-reusable middle — query-parameter parsing, WHERE construction, projection
-resolution, paging headers and the arrow→CSV/parquet streaming path.
-
-A consumer writes its own handler and calls into these. See issue #34 for
-the decision and its rationale.
+The library owns the reusable middle of a ``/data`` handler — query-parameter
+parsing, WHERE construction, projection resolution, paging headers and the
+arrow→CSV/parquet streaming path. The consumer owns the route, because
+orchestration is where catalog-specific caching, partition pushdown and vendor
+extensions live, and every catalog shapes those differently. A consumer writes
+its own handler and calls into these.
 """
 
 from __future__ import annotations

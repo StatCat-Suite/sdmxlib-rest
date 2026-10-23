@@ -2,8 +2,7 @@
 
 Everything here is driven by the request's query string plus a
 `sdmxlib.DataflowBinding` — no catalog-specific knowledge. A consumer
-wires these into its own ``/data`` handler; the library does not own the
-route (see issue #34 for the boundary rationale).
+wires these into its own ``/data`` handler.
 """
 
 from __future__ import annotations

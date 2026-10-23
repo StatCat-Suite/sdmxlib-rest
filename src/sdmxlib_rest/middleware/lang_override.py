@@ -1,4 +1,4 @@
-"""``?lang=`` query-param override for ``Accept-Language`` (issue #72).
+"""``?lang=`` query-param override for ``Accept-Language``.
 
 Upstream ``dotstatsuite-core-getdata`` accepts ``?lang=fr`` as a
 convenience override so Explorer / dev tooling can switch language

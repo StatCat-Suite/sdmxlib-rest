@@ -2,9 +2,9 @@
 
 The ``/metadata/*`` routes need to answer "which MetadataSets are attached to
 this structural artefact / metadataflow?" — a lookup over the bundle's
-referential-metadata linkage. The library does not know how that linkage is
-stored (a consumer's bundle keeps it in its own DuckDB tables); it only needs
-the set URNs back, which it then materialises through the catalog like any
+referential-metadata linkage. The consumer decides how that linkage is
+stored (a consumer's bundle keeps it in its own DuckDB tables); the library
+needs only the set URNs back, which it then materialises through the catalog like any
 other artefact.
 
 A consumer implements `MetadataStore`; the default

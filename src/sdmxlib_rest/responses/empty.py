@@ -5,7 +5,7 @@ path: a query that succeeded but matched zero artefacts/observations.
 The spec is clear that 200 with an empty payload and 204 carry the
 same semantic ("you asked, nothing matched"), but strict clients
 differentiate the two so that a "no match" doesn't have to be inferred
-from a non-error body's shape. Closes #32.
+from a non-error body's shape.
 
 We apply this to JSON structure / metadata / availability responses
 post-serialise — same splice pattern as the URN / HIER_CONTEXT

@@ -1,15 +1,14 @@
 """HTTP content-type negotiation helpers.
 
 Each SDMX route advertises a small set of media types it can serialise. If
-the caller's ``Accept`` header excludes every one of them, we owe them a
-``406 Not Acceptable`` rather than a silent fall-through to JSON (the
-SDMX-REST 2.2.2 contract).
+the caller's ``Accept`` header excludes every one of them, the route answers
+``406 Not Acceptable``, as the SDMX-REST 2.2.2 contract requires.
 
-The matcher is deliberately liberal — SDMX-CSV / SDMX-JSON / SDMX-ML
-content types are long and version-suffixed, and clients commonly send
+The matcher is liberal. SDMX-CSV / SDMX-JSON / SDMX-ML content types are
+long and version-suffixed, and clients commonly send
 ``application/vnd.sdmx.data+csv`` (no version), ``text/csv``,
-``application/xml``, etc. We accept the most common shorthand forms
-without quibbling about q-values.
+``application/xml``, etc. We accept the most common shorthand forms and
+strip q-values.
 """
 
 from __future__ import annotations

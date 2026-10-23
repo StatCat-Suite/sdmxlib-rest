@@ -1,4 +1,4 @@
-"""SDMX-REST 2.2.2 `/availability` — what values are queryable for one component?
+"""SDMX-REST 2.2.2 `/availability` — the values queryable for one component.
 
 Given a flow and a partial key (any segment may be wildcard), return the
 distinct set of values that actually appear for the requested component

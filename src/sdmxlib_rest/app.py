@@ -1,20 +1,19 @@
 """The generic SDMX-REST application factory.
 
-What a consumer actually has to get right to stand up an SDMX-REST service is
-not the routes — those are already library-owned — but the *assembly*: the
-middleware stack has an ordering invariant that is easy to violate and whose
-violations are subtle (an ETag computed over compressed bytes still looks like
-an ETag), the runtime has to be shared rather than rebuilt across mounted
-surfaces or each one opens its own catalog, and the multi-spec docs page has to
-be hand-rolled because FastAPI's helper can't emit one.
+A consumer standing up an SDMX-REST service gets the routes from the library;
+the remaining work is the *assembly*. The middleware stack has an ordering
+invariant whose violations are hard to spot: an ETag computed over compressed
+bytes still looks like an ETag. Mounted surfaces must share one runtime, or each
+opens its own catalog. The multi-spec docs page is built by hand because
+FastAPI's helper emits a single-spec page.
 
-So this module owns the assembly and leaves every catalog-shaped decision to
-the caller: which routers to include and in what order, what extra middleware
+This module owns the assembly and leaves every catalog-shaped decision to the
+caller: which routers to include and in what order, what extra middleware
 to layer, which sub-apps to mount, and what to warm at startup.
 
 See `create_app`. The ordering invariant is documented at its call to
-``_install_middleware`` and is the single most important thing here — #1
-tracks giving it regression coverage.
+``_install_middleware``; ``tests/test_middleware_invariants.py`` covers it
+(#1).
 """
 
 from __future__ import annotations

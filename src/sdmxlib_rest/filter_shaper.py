@@ -10,9 +10,9 @@ dimension's value list to every code beneath that parent. The client asked one
 question; the catalog answers a broader one because it knows the hierarchy.
 
 *Physics.* A catalog that knows its own partition layout can add a redundant
-predicate that changes nothing about the result but everything about the scan —
-e.g. a lake partitioned by geographic level can inject a ``GEO_LEVEL`` equality
-when ``REF_AREA`` is a short concrete list, which is what lets DuckDB prune
+predicate that leaves the result unchanged and narrows the scan — e.g. a lake
+partitioned by geographic level can inject a ``GEO_LEVEL`` equality when
+``REF_AREA`` is a short concrete list, which is what lets DuckDB prune
 partitions.
 
 Neither belongs in a generic library: the first is a vendor extension, the
@@ -21,7 +21,7 @@ same point in every route that builds a filter, so the library defines the hook
 and the catalog fills it. The default `NullComponentFilterShaper` returns
 the filter untouched, so a catalog that models neither pays nothing.
 
-The shaper receives the raw query items rather than pre-parsed values, because
+The shaper receives the raw query items because
 the library does not know which parameters a given extension reads — parsing
 ``within[...]`` is the shaper's own business.
 """

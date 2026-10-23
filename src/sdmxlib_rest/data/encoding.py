@@ -1,9 +1,8 @@
 """Wire-format encoders for observation streams.
 
 Every encoder here takes an iterable of Arrow record batches (or of CSV byte
-chunks) and yields bytes, so memory stays bounded by batch size rather than
-by result size. That property is the point: bulk SDMX downloads are routinely
-larger than a pod's memory budget.
+chunks) and yields bytes, so memory stays bounded by batch size. Bulk SDMX
+downloads are routinely larger than a server process's memory budget.
 """
 
 from __future__ import annotations

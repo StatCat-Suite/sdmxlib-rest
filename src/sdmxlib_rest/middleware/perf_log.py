@@ -21,7 +21,7 @@ The default wiring in ``app.py`` binds it to a loguru sink pointed at
    jq -r 'select(.kind=="perf") | [.wall_ms, .bytes, .path] | @tsv' /tmp/perf.jsonl \\
        | sort -rn | head -20
 
-Fields captured — deliberately narrow:
+The record keeps a narrow field set:
 
 - ``method``, ``path`` — request identity (no query string, so URLs with
   keys don't blow up cardinality on grep-and-count histograms).
@@ -39,9 +39,8 @@ Fields captured — deliberately narrow:
   cache-friendly paths. Lets us track "how much traffic actually
   ranges" and "conditional-GET hit ratio".
 
-Nothing sensitive in the record — no cookies, no Authorization, no
-query string, no body. The path itself may contain SDMX keys (which
-are catalog identifiers, not personal data).
+The record omits cookies, ``Authorization``, the query string and the
+body. The path may contain SDMX keys, which are catalog identifiers.
 """
 
 from __future__ import annotations
