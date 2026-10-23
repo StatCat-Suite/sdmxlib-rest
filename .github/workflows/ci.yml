@@ -48,3 +48,24 @@ jobs:
           cache-dependency-glob: pyproject.toml
       - run: uv sync --group dev
       - run: uvx --from rust-just==1.46.0 just test
+
+  # Every direct dependency at its declared floor. Without this a floor is only
+  # declared, never tested: `starlette>=0.40` let in releases where isa-l was
+  # silently skipped (GH-1), and 1.4 turned out to fail every compressed
+  # response, which only running here showed.
+  test-floors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv sync --group dev --resolution lowest-direct
+      # Starlette's TestClient uses an anyio alias anyio now deprecates, up to
+      # Starlette 1.6; the floor is 1.5. Ignored here only, by its message, so
+      # `filterwarnings = ["error"]` stays empty for the normal run.
+      - run: >-
+          uv run --no-sync pytest -m unit
+          -W "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning"
