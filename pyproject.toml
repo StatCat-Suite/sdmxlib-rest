@@ -26,10 +26,11 @@ classifiers = [
 # service it was extracted from: no statcatlib (the catalog is reached through
 # the CatalogProvider seam), no uvicorn (serving is the consumer's job).
 dependencies = [
-    # 0.70.1, not 0.70: 0.70.0's `obs()` cannot fetch from Eurostat or BIS
-    # (StatCat-Suite/sdmxlib#50, #51). Capped at the next minor while sdmxlib
-    # is pre-1.0, where a minor may break.
-    "sdmxlib>=0.70.1,<0.71",
+    # 0.71 refuses a store on another schema instead of emptying it
+    # (StatCat-Suite/sdmxlib#57), and 0.72 reads `bundle.manifest.json`, whose
+    # token is the cache key. Capped at the next minor while sdmxlib is
+    # pre-1.0, where a minor may break.
+    "sdmxlib>=0.72,<0.73",
     "attrs>=24",
     "fastapi>=0.115",
     "starlette>=0.40",
