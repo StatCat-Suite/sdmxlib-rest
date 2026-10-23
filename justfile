@@ -68,9 +68,17 @@ check-any:
 check-indexes:
     uv run python tools/check_indexes.py --check
 
+# Fail on the Writing style rules a pattern can check exactly (GH-55): a
+# Markdown heading that is a question, a fixed list of colon reveals and hook
+# clauses, and a bare issue reference on the docs site. The rest of the rules
+# need a reader; see CLAUDE.md.
+[group('dev')]
+check-prose:
+    uv run python tools/check_prose.py --check
+
 # Lint + typecheck (inner dev loop)
 [group('dev')]
-check: lint checkfmt check-docstrings check-any check-indexes typecheck
+check: lint checkfmt check-docstrings check-prose check-any check-indexes typecheck
 
 # Format code
 [group('dev')]
