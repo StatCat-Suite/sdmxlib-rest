@@ -3,7 +3,7 @@
 `_stub_lazy` builds a stub straight from a ``LazyCodelist`` — the fast path that
 exists so ``references=children`` can list thirteen codelists without reading a
 single code. Eleven call sites used it as ``_stub_lazy(x) or _stub(_materialize(x))``.
-sdmxlib 0.62 gave ``Codelist`` a ``__len__`` (sdmxlib #398), so the stub — whose
+sdmxlib 0.62 gave ``Codelist`` a ``__len__`` (sdmxlib#398), so the stub — whose
 codes are emptied by design — became falsy, and every one of those sites threw it
 away and materialised the whole codelist to stub it again.
 

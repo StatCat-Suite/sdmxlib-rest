@@ -141,7 +141,7 @@ def large(served: Served) -> Served:
 
 
 def test_a_stub_of_the_large_codelist_reads_no_codes(large: Served) -> None:
-    """Issue #9 there: a stub built by loading every code and dropping them."""
+    """#9: a stub built by loading every code and dropping them."""
     full = _best(large, large.codelist)
     stub = _best(large, large.codelist, {"detail": "allstubs"})
 

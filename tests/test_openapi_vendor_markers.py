@@ -4,8 +4,6 @@ OpenAPI's ``x-`` extension namespace is the spec-sanctioned way to add
 non-spec fields without breaking validation. SDK generators
 (openapi-generator, swagger-codegen, etc.) can filter out non-spec
 surface by walking the document for the marker.
-
-Closes #37.
 """
 
 from __future__ import annotations

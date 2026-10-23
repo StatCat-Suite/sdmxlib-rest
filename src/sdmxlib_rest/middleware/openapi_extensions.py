@@ -41,7 +41,7 @@ _VENDOR_PATH_TEMPLATES: Final[frozenset[str]] = frozenset(
         # Synthesised ContentConstraint endpoint for .Stat (cached per dataflow).
         "/v1/contentconstraint/{agencyID}/{resourceID}/{version}",
         "/contentconstraint/{agencyID}/{resourceID}/{version}",
-        # SDMX 2.1 envelope shim over SDMX 3 Hierarchy (closes #40).
+        # SDMX 2.1 envelope shim over SDMX 3 Hierarchy.
         "/hierarchicalcodelist/{agencyID}/{resourceID}/{version}",
         "/v1/hierarchicalcodelist/{agencyID}/{resourceID}/{version}",
         # SDMX 3-only binding artefact (no 1.5 / 2.2.2 spec entry).

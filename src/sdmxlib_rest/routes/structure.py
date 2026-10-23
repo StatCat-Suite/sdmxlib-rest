@@ -242,7 +242,7 @@ _VERSION_EXAMPLES: dict[str, Example] = {
 #                                `full` returns the same references in full
 #   referencecompletestubs     implemented — same walk, stubs keep name + description
 #   referencepartial           approximated as referencestubs — strict version needs a
-#                                per-component "items actually used in data" join (#11);
+#                                per-component "items actually used in data" join;
 #                                .Stat Explorer sends this on every dataflow preview, so
 #                                returning 501 broke compatibility. The approximation gives
 #                                clients the DSD + codelist headers they need to render.
@@ -514,15 +514,15 @@ async def get_structure(
     # Run every post-serialise splice in a SINGLE orjson parse/encode pass
     # (previously each splice round-tripped the full 8 MB body through
     # ``json.loads`` / ``json.dumps`` independently). The pipeline:
-    #   1. HIER_CONTEXT annotation on every DSD (closes #41)
+    #   1. HIER_CONTEXT annotation on every DSD
     #      (the METADATA annotation moved UP to the pre-serialise annotator
     #      seam above, so it reaches XML + JSON, not just this JSON pass.)
-    #   2. Codelist hydration per ``detail`` (closes #25) — only on
+    #   2. Codelist hydration per ``detail`` — only on
     #      dataflow queries with referencepartial / full.
     #   3. ConceptScheme concept hydration — same trigger as (2); pulls
     #      the DSD-referenced subset so .Stat's dim-label lookup resolves.
     # 204 No Content runs at the tail, after all splices have had their
-    # chance — preserves the #32 "empty wildcard returns 204" behaviour.
+    # chance — preserves the "empty wildcard returns 204" behaviour.
     hydrate = structureType == "dataflow" and detail in {"referencepartial", "full"}
     ctx = SpliceContext(
         registry=registry,
@@ -756,7 +756,7 @@ def _stub_of(artefact: object) -> object:
     Test the lazy stub against ``None``, never for truthiness. `_stub_lazy`
     returns ``None`` to mean "not a lazy wrapper", but a stub it *does* build has
     its items emptied — and an empty ``Codelist`` is falsy, because sdmxlib 0.62
-    gave it ``__len__`` (sdmxlib #398). Written as ``_stub_lazy(x) or ...``, the
+    gave it ``__len__`` (sdmxlib#398). Written as ``_stub_lazy(x) or ...``, the
     eleven call sites this replaces discarded every lazy codelist stub and
     materialised the whole codelist only to stub it again: ~5.6 ms per thousand
     codes, so ~3 s per stub on a codelist of half a million codes, on every request (#9).

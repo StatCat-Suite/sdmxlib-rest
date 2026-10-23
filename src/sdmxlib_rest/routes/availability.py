@@ -337,7 +337,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
                 "`available` enumerates the values that *would* leave the cube non-empty if "
                 "added to the key — i.e. per-component, the constraints on THAT component "
                 "are dropped before counting. Equivalent for components that have no "
-                "constraint in the key. Closes #23."
+                "constraint in the key."
             ),
         ),
     ] = "exact",
@@ -346,7 +346,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
         Query(
             description=(
                 "SDMX-REST 2.2.2 `acreferences` — comma-separated list of artefact types to "
-                "include alongside the synthesised constraint. Closes #24. Honoured values: "
+                "include alongside the synthesised constraint. Honoured values: "
                 "`none` (default), `all`, `datastructure`, `dataflow`, `codelist`, "
                 "`conceptscheme`. `dataproviderscheme` / `valuelist` are accepted but yield "
                 "empty collections (this bundle has none). For non-`none` values we walk the "
@@ -362,7 +362,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
             alias="startPeriod",
             description=(
                 "SDMX-REST 1.5 inclusive lower bound on TIME_PERIOD. 1.5 backport on the "
-                "2.2.2 surface (#46); strict 2.2.2 clients should use "
+                "2.2.2 surface; strict 2.2.2 clients should use "
                 "`c[TIME_PERIOD]=ge:<value>` instead."
             ),
         ),
@@ -474,7 +474,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     # 1.5 backport: startPeriod / endPeriod were SDMX-REST 1.5's mechanism for
     # inclusive TIME_PERIOD bounds. 2.2.2 dropped them; the canonical
     # equivalent is `c[TIME_PERIOD]=ge:<v>+le:<v>`. We accept both forms on
-    # /availability to match /data (#30, #46) — strict 2.2.2 clients should
+    # /availability to match /data — strict 2.2.2 clients should
     # prefer the c[] form.
     # Resolved only when a bound is given: a DSD read is ~15 ms on a large census bundle
     # and most requests carry no period bound.

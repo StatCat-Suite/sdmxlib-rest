@@ -77,7 +77,6 @@ class ConditionalGetMiddleware:
         # vs ``en`` both resolve to ``en`` — hashing the raw header would
         # spuriously miss the cache for what is the same language choice.
         # Falls back to ``en`` when no header (mirrors `_lang_from_accept_language`).
-        # Closes #71.
         preferred = parse_accept_language(accept_language)
         resolved_lang = preferred[0].lower() if preferred else "en"
 

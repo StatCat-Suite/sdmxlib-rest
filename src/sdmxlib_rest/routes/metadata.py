@@ -135,7 +135,7 @@ def _serialise(sets: Sequence[sl.MetadataSet], accept: str | None, accept_langua
     # SDMX-ML request; fall through to JSON so the browser renders inline.
     if accept and "xml" in accept.lower() and not is_browser_request(accept):
         return Response(content=to_xml(msg, version="3.0"), media_type=_XML_MEDIA_3)
-        # 204 No Content when the MetadataSet list is empty (closes #32).
+        # 204 No Content when the MetadataSet list is empty.
     return to_204_if_empty(
         localized_json_response(to_json(msg), media_type=_JSON_MEDIA, accept_language=accept_language, accept=accept)
     )
