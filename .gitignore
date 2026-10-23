@@ -34,3 +34,5 @@ htmlcov/
 # Shapes profiled from real bundles (`just bench-profile`): a real bundle's
 # codelist sizes and observation count identify it, so they stay local.
 tests/bench/shapes/local/
+# `just docs-build` output.
+site/

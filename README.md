@@ -7,6 +7,8 @@ It owns the parts of an SDMX-REST service that are the same everywhere — URL
 grammar, content negotiation, localisation, streaming, response assembly — and
 leaves everything catalog-specific to the consumer, behind explicit seams.
 
+Documentation: https://statcat-suite.github.io/sdmxlib-rest/
+
 ```python
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.runtime import CatalogRuntime
