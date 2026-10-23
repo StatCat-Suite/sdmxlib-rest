@@ -21,13 +21,13 @@ app = create_app(
 )
 ```
 
-That serves the structure, metadata and availability planes. Serving data is the
-consumer's job — see *Why there is no data route* below.
+That serves the structure, metadata and availability planes. The consumer
+writes the `/data` route; see *Data-plane helpers* below.
 
 ## What you supply
 
-Everything catalog-shaped is a Protocol on `CatalogRuntime`, each with a no-op
-default. A bare consumer implements only the first one.
+Each catalog-specific behaviour is a Protocol on `CatalogRuntime`. A consumer
+must implement `CatalogProvider`; every other seam has an inert default.
 
 | Seam | Purpose | Default |
 |---|---|---|
@@ -39,49 +39,48 @@ default. A bare consumer implements only the first one.
 | `ComponentFilterShaper` | rewrite a parsed filter before it is queried | identity |
 | `MessageAnnotator` | pre-serialise message annotation; with `SupportsFingerprint`, annotations that change at runtime re-key the structure cache and ETags. `OverlayAnnotator` applies sdmxlib annotation overlays | no-op |
 
-The defaults are all *inert*, not *broken*: a consumer that installs none of
-them gets a correct service, just one that recomputes more than it needs to.
+A consumer that installs none of the optional seams gets a correct service
+that recomputes more than it needs to.
 
 **The registry has to reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
 registry's own connection and attaches the lake there. Open a bundle with
 `LocalRegistry.bundle(path)`, or any opener that does the same (statcatlib's
-`Catalog` does). A lake attached only to some other connection is invisible to
-it. Since 0.6.0; before, `/availability` ran its own SQL on `meta_conn`.
+`Catalog` does). The DSL sees only lakes attached to the registry's own
+connection. This holds since 0.6.0; earlier versions ran `/availability` SQL on
+`meta_conn`.
 
 ## What `create_app` gives you
 
-Routes are the easy part. The assembly is what's worth not rewriting:
+Besides the routes, `create_app` assembles:
 
-- **The middleware stack, in the one order that works.** The chain has real
+- **The middleware stack in a fixed order.** The chain has real
   adjacency constraints — `?lang=` has to rewrite the header before the ETag
   layer reads it; the version rewrite has to land before compression decides;
   CORS has to be outermost or preflights fall through to a 404 that browsers
   report as a CORS failure. Each constraint is documented at
-  `_install_middleware`. Only successful responses are stamped with an ETag
-  and `Cache-Control`, so an error is never cached or revalidated.
-- **Unwritable catalogue content as a 500 that says what failed.** sdmxlib
+  `_install_middleware`. Only successful responses carry an ETag and
+  `Cache-Control`, so clients cache and revalidate successes only.
+- **A 500 that names unwritable catalogue content.** sdmxlib
   refuses to serialise content no format can carry (a component with no
   concept, say). The response lists each artefact path and the rule it
-  breaks, on the app and every mount, instead of a bare server error.
+  breaks, on the app and every mount.
 - **Runtime sharing across mounts**, so a service exposing several surfaces
   (a canonical one plus compatibility variants) opens the registry once.
-- **A multi-spec docs page**, which has to be hand-rolled because FastAPI's
+- **A multi-spec docs page**, built by hand because FastAPI's
   helper emits a single-spec page and Swagger UI renders nothing when given
   both `url` and `urls`.
 
-## Why there is no data route
+## Data-plane helpers
 
 The library owns data-plane *helpers* — key and query-parameter parsing,
 projection, paging headers, binding-driven SQL fragments, and the
-arrow→CSV/parquet encoders, all under `sdmxlib_rest.data`. It does not own the
-`/data` route itself.
+arrow→CSV/parquet encoders, all under `sdmxlib_rest.data`. Each consumer writes
+its own `/data` handler around them.
 
-That is deliberate. Orchestration is where response caching, partition pushdown
-and vendor extensions live, and every catalog shapes those differently — one
-catalog's hierarchy descent and partition-pruning tricks are noise to the next.
-A second consumer gets the hard, fiddly parts and writes its own handler around
-them.
+The handler orchestrates response caching, partition pushdown and vendor
+extensions, and every catalog shapes those differently: one catalog's hierarchy
+descent and partition pruning fit that catalog alone.
 
 ## Status
 
