@@ -213,7 +213,7 @@ just test      # unit tests
 just ci        # full gate
 just typecheck # pyrefly alone (also part of `check`)
 just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not in `ci`
-just bench-synthetic      # the same tier on a synthetic bundle (tests/bench/shapes/)
+just bench-synthetic [shape]  # the same tier on a synthetic bundle: `large`, or `census` for a census-sized geography
 ```
 
 ## Versioning

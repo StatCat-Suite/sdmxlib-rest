@@ -108,10 +108,12 @@ bench bundle="":
 
 # A real bundle cannot leave the machine holding it, so the bundle tier also
 # runs against `sdmxlib.testing.synthetic_bundle` (GH-37). SHAPE is a file
-# under tests/bench/shapes/ or shapes/local/, or a .json path. `large` is
-# chosen by hand, not profiled: one 20k-code three-level hierarchy, four small
-# dimensions, 20M rows, built in about 20 s. The bundle is cached under
-# .bench/ by shape and seed.
+# under tests/bench/shapes/ or shapes/local/, or a .json path, chosen by hand:
+# `large` is one 20k-code three-level hierarchy and four small dimensions, 20M
+# rows, built in about 20 s. `census` is modelled on the public 2021 Census
+# Profile: a ~580k-code six-level geography, a ~2.6k-code nine-level
+# characteristic list, names in English and French, 20M rows, about 2 min. The
+# bundle is cached under .bench/ by shape and seed.
 #
 # Build (or reuse) a synthetic bundle of SHAPE and run the bundle tier on it
 [group('test')]
