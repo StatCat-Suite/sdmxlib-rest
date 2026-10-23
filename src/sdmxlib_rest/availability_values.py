@@ -1,4 +1,4 @@
-"""The precomputed-availability seam: value lists, not rendered responses.
+"""The precomputed-availability seam, which supplies value lists for the library to render.
 
 ``/availability`` answers in two steps — compute the per-component distinct
 value sets and the observation count, then render them. This seam sits between
@@ -7,14 +7,13 @@ into the bundle or because it computed them once and kept them, hands them back
 and the scan never runs. The library renders the response either way, through
 `~sdmxlib_rest.responses.availability.render_availability`.
 
-**Consulted only for unfiltered requests, and that is what keeps the key small.**
+**The seam is consulted only for unfiltered requests, which keeps its key small.**
 Precompute can only ever cover the unfiltered answer: the filter space is
 unbounded, so nobody can bake every combination of ``c[]`` values, partial keys
 and period bounds. Restricting the seam to that case means its key is just the
 build, the flow and the component — nothing to normalise, so no way for two
 spellings of one filter to land in different slots, or two different filters to
-share one. A filtered request always scans; it would have to anyway, since
-nothing could have precomputed it.
+share one. A filtered request always scans.
 
 "Unfiltered" is judged **after** the `~sdmxlib_rest.filter_shaper.ComponentFilterShaper`
 runs. A shaper may add a constraint the request never named, and the answer is
@@ -22,17 +21,17 @@ then filtered whatever the URL said — so a precomputed unfiltered answer would
 wrong for it. A shaper may only narrow requests that were already filtered, but
 the library cannot assume every shaper does.
 
-**Why the key has no mode, format, language or references.** With no constraints,
+**The key omits mode, format, language and references.** With no constraints,
 ``mode=available`` relaxes nothing and returns exactly what ``mode=exact`` does.
-``Accept``, ``Accept-Language`` and ``references=`` change the *rendering*, not the
-values. So one entry per (build, flow, component) serves every client spelling —
-where the response-level cache this replaced needed a slot per accept variant x
-query suffix x language, and still missed ``?lang=fr``.
+``Accept``, ``Accept-Language`` and ``references=`` change only the
+*rendering*. So one entry per (build, flow, component) serves every client
+spelling — where the response-level cache this replaced needed a slot per
+accept variant x query suffix x language, and still missed ``?lang=fr``.
 
-**Repeat-caching a filtered answer is a different job** — memoisation rather than
-precompute — and belongs above the route: a consumer can install an HTTP response
-cache through ``create_app(outer_middleware=...)``. It sits outside compression
-there, so it must key on ``Accept-Encoding`` as well as ``Accept`` and
+**Repeat-caching a filtered answer is memoisation and belongs above the route.**
+A consumer can install an HTTP response cache through
+``create_app(outer_middleware=...)``. It sits outside compression there, so it
+must key on ``Accept-Encoding`` as well as ``Accept`` and
 ``Accept-Language``.
 """
 

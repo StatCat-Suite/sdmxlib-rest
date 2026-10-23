@@ -8,10 +8,10 @@ consumer could see *that* a route failed but not which artefact or which rule
 (#10). The defect is in the catalogue, so the fix is the producer's, and this
 response exists to make it fast to find.
 
-Deliberately a 500 and nothing more lenient. No request can avoid it, and
+The status stays 500. No request can avoid it, and
 writing the content anyway would hand strict clients a document they reject,
-moving the failure somewhere harder to diagnose. A switch to turn validation
-off was considered on #10 and not added.
+moving the failure somewhere harder to diagnose. #10 considered a switch to
+turn validation off and rejected it.
 """
 
 from __future__ import annotations

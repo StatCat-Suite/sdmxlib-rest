@@ -1,16 +1,14 @@
 """Mark vendor parameters + paths in the published OpenAPI document.
 
 The OpenAPI spec allows `x-`-prefixed extensions on any object. We use
-``x-vendor: true`` to tag query params + paths that aren't part of the
-SDMX-REST contract but that we expose for our own clients. Consumers
+``x-vendor: true`` to tag query params + paths that a service exposes beyond
+the SDMX-REST contract. Consumers
 generating spec-conformant SDKs (openapi-generator and friends) can
 filter these out by walking the spec for the marker.
 
 Applied as a post-processor on the FastAPI app's ``openapi()`` cache so
 the published ``/openapi.json`` and ``/v1/openapi.json`` carry the
 markers. See `apply_vendor_markers`.
-
-Closes #37.
 """
 
 from __future__ import annotations

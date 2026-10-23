@@ -11,14 +11,14 @@ value lists from somewhere other than a live scan — a table its producer baked
 into the bundle, its own cache, anything — can get a conformant response without
 reimplementing the format.
 
-**Why it is a helper and not a seam.** The response shape is spec work, the same
-for every catalog; *where the values come from* is a catalog decision. That is
-the division `CLAUDE.md` already draws for ``/data``: the library owns the
-helpers and the consumer owns the orchestration. The alternative — a consumer
+**This is a helper because the response shape is spec work**, the same for
+every catalog; *where the values come from* is a catalog decision. The ``/data``
+plane follows the same division: the library owns the helpers and the consumer
+owns the orchestration. The alternative — a consumer
 caching rendered bytes — makes every (format x language x query spelling) its own
 cache entry and leaves two renderers that can drift: baked entries planted
 under each accept variant still miss ``?lang=fr``, and baked bodies need
-patching wherever they and the live renderer disagree. See issue #7.
+patching wherever they and the live renderer disagree. See #7.
 """
 
 from __future__ import annotations

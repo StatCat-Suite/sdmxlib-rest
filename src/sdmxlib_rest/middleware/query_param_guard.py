@@ -1,10 +1,10 @@
-"""Reject unknown query params with 400 (closes #34).
+"""Reject unknown query params with 400.
 
 SDMX-REST 2.2.2 §"Bad syntax" says the server SHOULD reject malformed or
-unrecognised input. FastAPI's default is to silently ignore unknown query
-params — a typo like ``?detial=full`` instead of ``?detail=full`` quietly
-gets dropped. That's what hid bug #45 (1.5 ``detail`` was undeclared on
-/v1/data so strict spec clients got silent ignore).
+unrecognised input. FastAPI ignores unknown query params by default, so a
+typo like ``?detial=full`` for ``?detail=full`` is dropped and the client
+gets the default answer. The same silent drop once hid an undeclared
+``detail`` parameter on a 1.5 data route.
 
 This dependency runs per route:
 
@@ -16,7 +16,7 @@ This dependency runs per route:
    routes; per-route is a future refinement).
 3. Allows bracketed prefixes — ``c[<DIM>]=`` and ``within[<DIM>]=``
    appear in the query string but aren't modelled by FastAPI's
-   parameter dependancy graph (deepObject style). They're parsed
+   parameter dependency graph (deepObject style). They're parsed
    manually from ``request.query_params.multi_items()`` inside the
    handler, so they're legitimate.
 4. 400 on anything else, naming the offender.

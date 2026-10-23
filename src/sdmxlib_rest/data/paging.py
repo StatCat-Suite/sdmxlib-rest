@@ -2,7 +2,7 @@
 
 SDMX-REST has no pagination of its own for the data plane; clients that need
 it (the .Stat Data Explorer in particular) reuse HTTP Range with a row-count
-unit rather than bytes. This module parses the request side and builds the
+unit in place of bytes. This module parses the request side and builds the
 matching response headers.
 """
 

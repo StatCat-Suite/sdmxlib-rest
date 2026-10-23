@@ -1,33 +1,32 @@
 """The catalog-provider seam.
 
 The library owns the HTTP shape of SDMX-REST over a
-`sdmxlib.LocalRegistry`; it does NOT know how that registry is
-opened. A consumer supplies a `CatalogProvider` whose `open`
-returns an `OpenedCatalog` — the registry, a raw DuckDB connection,
+`sdmxlib.LocalRegistry`. The consumer opens that registry: it supplies
+a `CatalogProvider` whose `open` returns an `OpenedCatalog` — the registry, a raw DuckDB connection,
 and an opaque build manifest.
 
 **The registry must reach its own observations.** ``/availability`` reads
 rows through ``registry.obs(flow)``, sdmxlib's query DSL, which runs
 on the registry's own connection and attaches the lake there itself. A
 registry opened with ``LocalRegistry.bundle(path)`` does; so does statcatlib's
-``Catalog``. A lake attached only to some other connection is invisible to it.
-``meta_conn`` is no longer what any library route queries: it is handed to a
+``Catalog``. The DSL sees only lakes attached to the registry's own
+connection. No library route queries ``meta_conn``; the library hands it to a
 consumer's seams (``ComponentFilterShaper`` via ``FilterContext.conn``,
 ``MessageAnnotator``, ``MetadataStore``) for SQL of their own.
 
-``LocalRegistry`` is named concretely rather than behind a Protocol because
+``OpenedCatalog`` names ``LocalRegistry`` as a concrete type because
 ``binding_for`` — which every data-plane helper needs — exists only there;
-no Protocol in sdmxlib covers it. sdmxlib 0.48's ``FederatedCatalog`` was
-equally concrete, so this is a like-for-like swap rather than a narrowing
-of what a provider could already return.
+no Protocol in sdmxlib covers it. sdmxlib 0.48's ``FederatedCatalog``,
+which it replaced, was equally concrete, so a provider returns the same
+kind of type it returned before.
 
-``manifest`` is typed ``object | None`` on purpose: the library never
+``manifest`` is typed ``object | None`` because the library never
 introspects it (only for equality-of-identity in ETag/cache keys via the
 consumer's own accessor). Consumer code — its manifest reader, its response
 splices, its ``/health`` payload — casts it back to the concrete type.
 
-How a catalog is opened — bundle format, storage, lake — is the consumer's
-provider implementing this protocol; nothing about it leaks into the library.
+The consumer's provider decides how a catalog is opened — bundle format,
+storage, lake — and the library sees only the `OpenedCatalog`.
 """
 
 from __future__ import annotations
