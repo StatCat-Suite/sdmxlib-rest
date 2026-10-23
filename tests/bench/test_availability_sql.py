@@ -9,15 +9,17 @@ clause under test, which says "this costs what it should" rather than "this
 machine is fast". The bounds are set well inside the observed effect so they
 fail when the effect disappears, not when the CI runner is busy.
 
-Observed on a ~500M-row, 6-dimension census bundle, duckdb 1.5.5 and 1.5.6 alike:
+Observed on a ~500M-row, 6-dimension census bundle, duckdb 1.5.5 and 1.5.6 alike,
+except where a row names duckdb 2.0.0:
 
-===========================================  ==================
-measurement                                  observed
-===========================================  ==================
-``COUNT(*)`` with the sidecar join           126x - 882x slower
-combined single-scan aggregate vs the loop   ~2.6x slower
-availability answer under a 256 MB cap       completes, 7.5 s
-===========================================  ==================
+=================================================  ==================
+measurement                                        observed
+=================================================  ==================
+``COUNT(*)`` with the sidecar join                 126x - 882x slower
+combined aggregate vs the loop, unfiltered         ~2.6x slower
+the same, duckdb 2.0.0 (GH-36)                     0.85x
+availability answer under a 256 MB cap             completes, 7.5 s
+=================================================  ==================
 
 The first two are the evidence for issues #3 and #4 respectively.
 """
@@ -126,13 +128,14 @@ def test_the_join_does_not_change_the_count_on_this_bundle(bundle: Bundle) -> No
     assert int(joined[0]) == bundle.rows
 
 
-def test_unfiltered_the_loop_beats_the_combined_aggregate(bundle: Bundle) -> None:
-    """#4, half one: with no filter the per-dimension loop wins.
+def test_unfiltered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
+    """#4, half one: with no filter the combined aggregate wins on DuckDB 2 (GH-36).
 
-    Each unfiltered ``DISTINCT`` is cheap, while the combined form pays to
-    materialise a sorted array per dimension — tens of thousands of elements
-    for a geographic ``REF_AREA``. This is the dominant .Stat request (the bare-flow URL), and
-    the case the route must *not* send through the combined shape.
+    This is the dominant .Stat request (the bare-flow URL). DuckDB 1.5 lost it
+    by 2.8x, building a sorted array per dimension; DuckDB 2 wins it by 1.2x on
+    a ~500M-row census bundle. A bundle with few rows and a very large
+    geography can still lose: on the synthetic ``census`` shape the loop usually
+    wins, by 1.2-2x, so this test usually fails there.
     """
     columns = bundle.dims[:6]
     if len(columns) < 2:
@@ -142,11 +145,11 @@ def test_unfiltered_the_loop_beats_the_combined_aggregate(bundle: Bundle) -> Non
     loop += _best(bundle.conn, f"SELECT COUNT(*) FROM {bundle.main}")
     combined = _best(bundle.conn, _combined(bundle, columns))
 
-    assert combined > loop * 1.5, (
-        f"expected the combined aggregate to lose when unfiltered; "
+    assert combined < loop, (
+        f"expected the combined aggregate to win unfiltered; "
         f"loop={loop:.2f}s combined={combined:.2f}s ({combined / loop:.2f}x). "
-        f"If it is winning again, `fast_path_eligible` should admit the unfiltered "
-        f"case once more — re-measure before changing it."
+        f"`fast_path_eligible` sends unfiltered requests through it; if the loop wins "
+        f"on a large bundle too, exclude the unfiltered case again."
     )
 
 
@@ -154,9 +157,8 @@ def test_filtered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
     """#4, half two: with a filter the combined form wins, which is why it survives.
 
     Any predicate makes every ``DISTINCT`` pay a scan of its own, and then one
-    scan beats six. The two halves together are the whole justification for
-    ``fast_path_eligible`` requiring a non-empty WHERE — without this test the
-    route would look like it should simply drop the combined shape.
+    scan beats six. On DuckDB 1.5 this half alone kept the combined shape in
+    the route.
     """
     columns = bundle.dims[:6]
     if len(columns) < 2:
