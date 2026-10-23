@@ -8,27 +8,26 @@ URL grammar, content negotiation, localisation, streaming, response assembly —
 and pushes everything catalog-specific behind explicit seams.
 
 Extracted in place from its first consumer service over four phases and split
-out here in the fifth. That history matters: every seam exists because a real
-service needed it, not because it seemed like good architecture. Don't add a
-seam speculatively.
+out here in the fifth. Every seam exists because a real service needed it.
+Don't add a seam speculatively.
 
 ## The rule
 
-**No catalog-specific logic. Ever.** If something needs to know about a
-particular bundle, lake layout, agency, codelist or vendor parameter, it belongs
-in the consumer, behind a seam. The library provides the Protocol and an inert
-default; the consumer provides the implementation.
+**The library holds no catalog-specific logic.** If something needs to know
+about a particular bundle, lake layout, agency, codelist or vendor parameter, it
+belongs in the consumer, behind a seam. The library provides the Protocol and
+an inert default; the consumer provides the implementation.
 
-"Inert, not broken" is the test for a default: a consumer installing none of the
-seams must get a *correct* service, just a slower one.
+A default must be inert: a consumer installing none of the seams must get a
+*correct* service that recomputes more than it needs to.
 
 ## Seams
 
 All are Protocols carried on `CatalogRuntime` (`runtime.py`).
 
-`CatalogProvider` is the exception to "everything is a Protocol": it hands back
-an `sl.LocalRegistry` named concretely, because `binding_for` — which every
-data-plane helper needs — exists only there and no sdmxlib Protocol covers it.
+`CatalogProvider` is the one seam that names a concrete type: it returns an
+`sl.LocalRegistry`, because `binding_for` — which every data-plane helper
+needs — exists only there and no sdmxlib Protocol covers it.
 
 | Seam | File | Default |
 |---|---|---|
@@ -52,7 +51,7 @@ src/sdmxlib_rest/
     localization.py      # Accept-Language localisation
     structure_cache.py   metadata_store.py   availability_values.py  filter_shaper.py
     overlays.py          # OverlayAnnotator: sdmxlib annotation overlays at serve time
-    data/                # data-plane HELPERS (not the route — see below)
+    data/                # data-plane helpers; consumers own the route (see below)
         params.py        # c[] filters, sort, dimensionAtObservation, id patterns
         projection.py    # attributes=/measures= projection, key_dimension_ids
         encoding.py      # SDMX-CSV+labels, BOM, streaming zip, streaming parquet
@@ -75,38 +74,37 @@ extensions live, and every catalog shapes those differently. A consumer gets the
 fiddly parts — key parsing, projection, paging headers, SQL fragments, the
 arrow→CSV/parquet encoders — and writes its own handler around them.
 
-`/availability` is the one library route that reads observations, and it does
-so through sdmxlib's query DSL (`registry.obs(flow)`), not SQL of its
-own (#6). So a provider's registry must reach its lake on its own connection;
-`meta_conn` is only for consumers' seams. The DSL builds one query root per
-request, ~13–19 ms on a large census bundle (sdmxlib#426); don't cache roots
-across requests, since a root binds the constructing thread's cursor.
+`/availability` is the one library route that reads observations. It reads
+them through sdmxlib's query DSL, `registry.obs(flow)` (#6), so a provider's
+registry must reach its lake on its own connection; `meta_conn` is only for
+consumers' seams. The DSL builds one query root per request, ~13–19 ms on a
+large census bundle (sdmxlib#426); don't cache roots across requests, since a
+root binds the constructing thread's cursor.
 
 Resist requests to "just add a data route". It was considered and rejected with
 a quantitative inventory of what each consumer's handler does.
 
-## The URL grammar is SDMX-REST 2.2.2, and only that
+## SDMX-REST 2.2.2 URL grammar
 
-Every published path is 2.2.2 shape. That is not incidental — it settles what a
-dotted key means. 2.2.2 makes the time dimension a **key slot**, so a key is
-parsed against `dsd.key_slot_ids("3.0")` and a short key is a 400, not a
-truncation to pad out.
+Every published path has the 2.2.2 shape, which settles what a dotted key
+means. 2.2.2 makes the time dimension a **key slot**, so a key is parsed
+against `dsd.key_slot_ids("3.0")` and a short key returns 400.
 
 SDMX-REST 1.5/2.1 keeps time *out* of the key (`startPeriod` / `endPeriod`
 filter it instead), so a 1.5 key is one segment shorter for the same DSD.
-Reading one against the other's slot list does not error — it shifts every
-value one slot and answers confidently wrong.
+Parsing a key against the other generation's slot list shifts every value by
+one slot and returns wrong data without raising an error.
 
 **A 1.5 surface is a consumer's forwarder**, translating the older grammar
-before it reaches these routes. The forwarder knows which generation it serves;
-a route that only serves one does not need to be told, which is why `ApiVersion`
-is not threaded through the data plane. `AvailabilityKey` keys on the resolved
-flow URN rather than the request path, so a forwarder's path shape cannot
-collide two flows, and the 1.5 and 2.2.2 surfaces share one precomputed entry.
+before it reaches these routes. The forwarder knows which generation it serves
+and the routes serve only 2.2.2, so the data plane takes no `ApiVersion`.
+`AvailabilityKey` keys on the resolved flow URN, so two flows stay distinct
+under any forwarder path shape, and the 1.5 and 2.2.2 surfaces share one
+precomputed entry.
 
-Individual 1.5 *conveniences* are backported onto the 2.2.2 routes where they
-cost nothing — the `all` wildcard, `startPeriod`/`endPeriod`, the
-no-`componentID` form. Those are spellings, not a second grammar.
+Individual 1.5 *conveniences* are backported onto the 2.2.2 routes as alternate
+spellings where they cost nothing — the `all` wildcard,
+`startPeriod`/`endPeriod`, the no-`componentID` form.
 
 ## The middleware ordering invariant
 
@@ -114,7 +112,7 @@ no-`componentID` form. Those are spellings, not a second grammar.
 real failure mode — an ETag over compressed bytes, a `?lang=` that hashes wrong,
 a CORS preflight falling through to a 404. The docstring documents each one.
 **Read it before touching the order.** `tests/test_library_create_app.py` pins
-the sequence; that assertion is deliberate, not incidental.
+the sequence; change that assertion only together with the docstring.
 
 ## Style
 
@@ -194,8 +192,8 @@ stating it.
 
 Issues live on GitHub (StatCat-Suite/sdmxlib-rest). The project moved from
 GitLab in October 2026, and the tree cites the GitLab tracker as a bare `#N` —
-`#6`, `#35`. Those keep meaning GitLab (gitlab.com/pinax-suite/sdmxlib-rest, an
-archive now) and are not rewritten; `sdmxlib#N` likewise means sdmxlib's GitLab
+`#6`, `#35`. Those still mean GitLab (gitlab.com/pinax-suite/sdmxlib-rest, an
+archive now) and stay as written; `sdmxlib#N` likewise means sdmxlib's GitLab
 tracker.
 
 **Write a GitHub issue or PR as `GH-N`**, never a bare `#N`: GitHub numbers
@@ -212,7 +210,7 @@ just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop wit
 just test      # unit tests
 just ci        # full gate
 just typecheck # pyrefly alone (also part of `check`)
-just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not in `ci`
+just bench <bundle-dir>   # the bundle tier — ratios against a real lake; `ci` skips it
 just bench-synthetic [shape]  # the same tier on a synthetic bundle: `large`, or `census` for a census-sized geography
 just docs      # serve the docs site (docs/, mkdocs.yml); `just docs-build` is the strict build in `ci`
 ```
@@ -224,9 +222,9 @@ deliberately. Pre-1.0, breaking a seam Protocol is a minor bump; after 1.0 it is
 a major. `just release-1-preview` through `release-5-pypi`: a release is a
 `release/vX` PR like any other change. git-cliff drafts the changelog entry
 (steps 1-2, prepended, with a pre-1.0 breaking change bumping the minor); steps
-3-4 publish the *curated* CHANGELOG.md section (`just release-notes VERSION`),
-not the regenerated one; step 5 builds the checked-out tag and uploads it to
-PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
+3-4 publish the CHANGELOG.md section as curated after step 2
+(`just release-notes VERSION`); step 5 builds the checked-out tag and uploads it
+to PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
 
 ## Docs site
 
@@ -241,4 +239,4 @@ updates the page that describes it.
 
 - `../sdmxlib` — the domain model and `LocalRegistry` this sits on top of.
 - `../statcatlib` (formerly pinax) — `Catalog` bundle format a consumer's
-  provider may open. Not a dependency here, and must never become one.
+  provider may open. sdmxlib-rest must never depend on it.
