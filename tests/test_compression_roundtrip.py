@@ -26,6 +26,7 @@ from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
 from sdmxlib_rest.app import RestSettings, create_app
+from sdmxlib_rest.middleware.compression import _IsalGZipResponder
 from sdmxlib_rest.provider import OpenedCatalog
 from sdmxlib_rest.runtime import CatalogRuntime
 
@@ -81,6 +82,34 @@ def test_a_large_response_is_compressed_and_decodes(gzip_client: TestClient) -> 
     assert resp.status_code == 200
     assert resp.headers["content-encoding"] == "gzip"
     assert resp.json() == {"x": BIG}
+
+
+def test_a_large_response_is_compressed_by_isal(gzip_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """GH-1: the bytes decode the same from either backend, so ask which one ran.
+
+    `_IsalGZipResponder` swaps in isa-l by overriding the ``compressor``
+    property Starlette 1.4 introduced. A Starlette below 1.4 writes through a
+    stdlib ``gzip_file`` and never reads that property, so every response was
+    compressed by stdlib gzip: about 3x slower, larger, identical once decoded.
+    Asserting on bodies passes on both backends; this records the compressor
+    each response actually used, and an empty record is the old Starlette.
+    """
+    used: list[str] = []
+    getter = _IsalGZipResponder.compressor.fget
+    assert getter is not None
+
+    def recording(self: _IsalGZipResponder) -> object:
+        compressor = getter(self)
+        used.append(type(compressor).__module__)
+        return compressor
+
+    monkeypatch.setattr(_IsalGZipResponder, "compressor", property(recording))
+
+    resp = gzip_client.get("/big", headers={"Accept-Encoding": "gzip"})
+
+    assert resp.headers["content-encoding"] == "gzip"
+    assert used, "the responder never read `compressor`: this Starlette compresses without it"
+    assert set(used) == {"isal_zlib"}
 
 
 def test_compression_actually_shrinks_the_body(gzip_client: TestClient) -> None:

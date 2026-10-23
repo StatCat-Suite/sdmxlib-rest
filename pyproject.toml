@@ -32,8 +32,14 @@ dependencies = [
     # pre-1.0, where a minor may break.
     "sdmxlib>=0.72,<0.73",
     "attrs>=24",
-    "fastapi>=0.115",
-    "starlette>=0.40",
+    # 0.133 is the first FastAPI that lets Starlette past 1.0.
+    "fastapi>=0.133",
+    # 1.5: `_IsalGZipResponder` overrides the `compressor` property Starlette
+    # 1.4 introduced; older responders write through a stdlib `gzip_file` and
+    # never read it, so isa-l was silently skipped (GH-1). And 1.4 itself
+    # requires `thread_minimum_size`, which 1.5 defaults: on 1.4 every
+    # compressed response raises TypeError. Measured at the floors.
+    "starlette>=1.5",
     # These floors are sdmxlib 0.70's own, restated: nothing can resolve below
     # them, and nothing is tested below them, so they say what we support rather
     # than lean on inherited luck. Stores sdmxlib 0.70 writes need DuckDB 2,
@@ -44,8 +50,10 @@ dependencies = [
     "duckdb>=2.0",
     "polars>=2.0",
     "pyarrow>=26",
-    "orjson>=3.11",
-    "loguru>=0.7",
+    # 3.11.1: the first with CPython 3.14 wheels; 3.11.0 builds only on nightly Rust.
+    "orjson>=3.11.1",
+    # 0.7.3: 0.7.0 calls `asyncio.iscoroutinefunction`, deprecated on 3.14.
+    "loguru>=0.7.3",
     # Streaming zip + a faster DEFLATE backend for the CSV export path.
     "isal>=1.8.0",
     "zipstream-ng>=1.9.2",
