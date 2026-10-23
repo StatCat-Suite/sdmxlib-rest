@@ -5,6 +5,95 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-10-23
+
+Moves to sdmxlib 0.72, which runs on DuckDB 2 and Python 3.14 and publishes a
+bundle with a manifest. Caches and ETags now key on that manifest's token, so a
+bundle republished with a manifest is never served stale. `detail=full` returns referenced
+artefacts in full, and gzip responses use isa-l on every supported Starlette.
+
+**Rebuild your bundles before upgrading** if sdmxlib 0.67 or earlier built
+them, which is every bundle built alongside sdmxlib-rest 0.6.x. sdmxlib 0.68
+moved the store schema from 2.19 to 2.48. sdmxlib 0.71 and later refuse such a
+bundle on open with `sl.StoreSchemaError`; sdmxlib 0.68 to 0.70.1 emptied it
+instead (sdmxlib#57). A bundle built by sdmxlib 0.68 or later opens unchanged.
+
+**Needs** Python `>=3.14` and sdmxlib `>=0.72,<0.73`, with DuckDB `>=2.0`,
+polars `>=2.0`, pyarrow `>=26`, Starlette `>=1.5`, FastAPI `>=0.133`, loguru
+`>=0.7.3` and orjson `>=3.11.1`.
+
+### Upgrading
+
+1. Move the service to Python 3.14.
+2. Rebuild every bundle with sdmxlib 0.72 (statcatlib `>=0.9` builds on it),
+   and publish it with `sdmxlib.bundle.write_manifest`.
+3. Rename `build_id` to `token` in your `StructureCache`, `AvailabilityValues`,
+   splices and `MessageAnnotator` (below).
+4. Upgrade sdmxlib-rest. A bundle written by sdmxlib 0.70 or later cannot be
+   opened by sdmxlib 0.69 or DuckDB 1.5, so roll back by restoring the old
+   bundles too.
+
+### Breaking
+
+- **Caches and the ETag key on `token`** (GH-25). `StructureQuery`,
+  `AvailabilityKey` and `SpliceContext` carry `token` in place of `build_id`,
+  and `MessageAnnotator.annotate` takes `token=`. `CatalogRuntime.token` is the
+  provider's `OpenedCatalog.token` if it sets one, else the sdmxlib bundle
+  manifest's `token`, else `build_id`. A bundle without a manifest keeps its
+  0.6.x ETags. `build_id` and `built_at` stay on `OpenedCatalog` and the
+  runtime as the bundle's identity; `get_token` is the new request dependency.
+- **`detail=full` returns referenced artefacts in full** (GH-32). With
+  `references=children`, `descendants` or `all`, the referenced codelists,
+  concept schemes, hierarchies and DSD came back as stubs whatever `detail`
+  said, which SDMX-REST 2.2.2 does not allow. Such a request now reads every
+  code of every referenced codelist. A client that wants stubs asks for
+  `detail=referencestubs`. The shapes .Stat sends (`allcompletestubs`,
+  `referencepartial`) are unchanged. A splice that hydrates codelists on
+  `ctx.hydrate` now finds them already full.
+- **sdmxlib owns `bundle.manifest.json`.** A builder that writes its own file
+  under that name gets `sl.ManifestError` when the bundle opens. Republish
+  with `sdmxlib.bundle.write_manifest`, carrying your own fields in `product`.
+- **The unwritable-content 500 lists no `severity`** per issue: sdmxlib's
+  `ValidationIssue` dropped it.
+- **`AvailabilityValues`:** a `KeyValue`'s values are `RegionValue`s; read
+  `.value`. Building one from strings still works.
+
+### Fixed
+
+- **A republish under the same `build_id` served stale responses** (GH-25).
+  Caches kept the old bodies, and a client revalidating with `If-None-Match`
+  got a 304 for them. The manifest token changes at every publication, and
+  `Last-Modified` now follows the same source, so `If-Modified-Since` behaves
+  the same way.
+- **gzip responses skipped isa-l on Starlette below 1.4** (GH-1). The
+  responder overrides the `compressor` property Starlette 1.4 introduced, so on
+  older releases every response went through stdlib gzip: about 3x slower and
+  larger, with identical bytes once decoded. Starlette 1.4 itself failed every
+  compressed response with a `TypeError`, hence the `>=1.5` floor. A test now
+  asserts which compressor ran.
+- **`LICENSE` is the Apache License 2.0 text** (GH-23). The file shipped up to
+  0.6.4 differed from the apache.org text in about 130 lines, while the package
+  declared `Apache-2.0`. It is now the apache.org text with the copyright line
+  filled in.
+
+### Internal
+
+- pyrefly is the only type checker, over `src`, `tests` and `tools`; every
+  type-check suppression is a `# pyrefly: ignore[kind]`, and ANN401 is on
+  (GH-8, GH-26).
+- `just check` gained the suite's gates: a docstring check (Google style, no
+  Sphinx roles), an `Any` ratchet, a package-index guard, and ruff warnings
+  failing `lint` (GH-28, GH-29). pytest runs strict, with warnings as errors.
+- A `test-floors` CI job runs the unit suite with every direct dependency at
+  its floor (GH-34).
+- Release recipes follow sdmxlib's five steps, ending in `release-5-pypi`
+  (GH-27).
+- `tests/test_synthetic_bundle.py` serves the routes from a published
+  synthetic bundle and checks `/availability` against sdmxlib's DSL (GH-31).
+  `tests/test_library_import_boundary.py`, which the package docstring has cited
+  since 0.1.0, now exists (GH-21).
+- The project lives on GitHub; issues there are written `GH-N`.
+
 ## [0.6.4] - 2026-10-22
 
 Restores the references in a structure listing. Upgrade if any client asks for
