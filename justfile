@@ -8,9 +8,23 @@ default:
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 
+# Ruff exits 0 on a `warning:` line (an invalid `# noqa`, a deprecated
+# setting), so a warning never failed the gate and became noise everyone
+# filtered out. sdmxlib had two survive three milestones that way (#283 there).
+#
+# Ruff, with its warnings failing the gate too
 [group('dev')]
 lint:
-    uv run ruff check src tests
+    #!/usr/bin/env bash
+    set -uo pipefail
+    out=$(uv run ruff check src tests tools 2>&1)
+    status=$?
+    echo "$out"
+    if [[ $status -ne 0 ]]; then exit $status; fi
+    if grep -q "^warning:" <<< "$out"; then
+      echo "error: ruff emitted warnings; they fail the gate." >&2
+      exit 1
+    fi
 
 # pyrefly at `preset = "all"` minus a documented deny-list (see pyrefly.toml)
 # is the only type checker. Keep it at 0 findings. It covers `src` and
@@ -24,17 +38,36 @@ typecheck:
 
 [group('dev')]
 checkfmt:
-    uv run ruff format --check src tests
+    uv run ruff format --check src tests tools
+
+# ANN401 sees a bare `Any` but not one inside a generic argument
+# (`dict[str, Any]`), so the count of those may only go down, and going down
+# must be recorded (`uv run python tools/count_any.py --write`).
+#
+# Fail if the count of `Any` in src/ moves off tools/any_baseline.txt
+[group('dev')]
+check-any:
+    uv run python tools/count_any.py --check
+
+# Only public PyPI may be named in this repository: an index URL, a lockfile or
+# a `.netrc` committed from a machine behind a private mirror would publish
+# that mirror to every consumer. An allow-list, because naming the mirror in
+# the gate would itself be the leak.
+#
+# Fail if any tracked file names a package index other than public PyPI
+[group('dev')]
+check-indexes:
+    uv run python tools/check_indexes.py --check
 
 # Lint + typecheck (inner dev loop)
 [group('dev')]
-check: lint checkfmt typecheck
+check: lint checkfmt check-any check-indexes typecheck
 
 # Format code
 [group('dev')]
 fmt:
-    uv run ruff format src tests
-    uv run ruff check --fix src tests
+    uv run ruff format src tests tools
+    uv run ruff check --fix src tests tools
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 

@@ -138,7 +138,9 @@ carrying a "Moved from GitLab #N" line.
 ## Common commands
 
 ```bash
-just check     # ruff + pyrefly (src + tests)
+just check     # ruff (warnings fail too) + Any ratchet + index guard + pyrefly
+just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop with
+               #   `uv run python tools/count_any.py --write`
 just test      # unit tests
 just ci        # full gate
 just typecheck # pyrefly alone (also part of `check`)
