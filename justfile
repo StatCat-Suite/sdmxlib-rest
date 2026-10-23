@@ -1,5 +1,8 @@
 # sdmxlib-rest development tasks
 
+# `.env` supplies UV_PUBLISH_TOKEN to release-5-pypi; a missing file is fine.
+set dotenv-load
+
 default:
     @just --list
 
@@ -43,8 +46,10 @@ test:
 test-all:
     uv run pytest
 
-# Unit tests with coverage — the same selection as `just test`, so the number
-# reported is for the tests the gate runs.
+# The same selection as `just test`, so the number reported is for the tests
+# the gate runs.
+#
+# Unit tests with coverage (terminal, XML and HTML reports)
 [group('test')]
 coverage:
     uv run pytest -m unit --cov --cov-report=term-missing --cov-report=xml --cov-report=html
@@ -53,6 +58,8 @@ coverage:
 # The ratios behind milestone 1. Needs a real bundle: the effects that motivate
 # that work do not exist at fixture size, so without SDMXLIB_REST_BENCH_BUNDLE
 # every test skips rather than measuring something meaningless.
+#
+# Bundle-tier benchmarks against a real bundle directory
 [group('test')]
 bench bundle="":
     SDMXLIB_REST_BENCH_BUNDLE="{{bundle}}" uv run pytest -m bundle -s -v
@@ -65,24 +72,23 @@ ci: check test
 # and upgrades deliberately. Breaking a seam Protocol is a minor bump while
 # we're pre-1.0, and will be a major bump after.
 
+# Step 1 — Preview the next version and its generated changelog entry
 [group('release')]
 release-1-preview:
     @echo "Next version: $(git-cliff --bumped-version)"
     @echo ""
     @git-cliff --bump --unreleased
 
-# Starts release/vVERSION from origin/main, then inserts the new section above
-# the newest one. Deliberately NOT `git-cliff --bump -o CHANGELOG.md`, which
-# regenerates the whole file from commit subjects: that replaces the curated
-# entries (0.1.0's "Extracted from its first consumer" prose and its Added list,
-# 0.2.0's Breaking section) with three generated bullets, and rewrites the Keep
-# a Changelog header with cliff.toml's. It would also drop every entry before
-# 0.6.2, since GitHub's history starts at a single "sdmxlib-rest 0.6.2" commit.
-# Generated output is the *starting point* for an entry here, not the entry.
+# Prepends the unreleased section, never regenerates the file: GitHub's history
+# starts at a single "sdmxlib-rest 0.6.2" commit, so every entry before 0.6.3
+# exists only in CHANGELOG.md, as do the curated edits to the generated ones.
+# The prepend writes CHANGELOG.md's header once only because cliff.toml's
+# header matches it exactly. Generated output is the *starting point* for an
+# entry, not the entry.
 #
-# Start release/vX from origin/main and insert a generated entry, then edit it
+# Step 2 — Start release/vX from origin/main and prepend a generated entry (pass VERSION to pin)
 [group('release')]
-release-2-changelog VERSION:
+release-2-changelog VERSION='':
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -n "$(git status --porcelain)" ]]; then
@@ -91,51 +97,39 @@ release-2-changelog VERSION:
     fi
     git fetch origin --tags
     git switch --detach origin/main
-    git switch -c "release/v{{VERSION}}"
-    echo "Writing changelog for v{{VERSION}}..."
-    git-cliff --unreleased --tag "v{{VERSION}}" > /tmp/cliff-section.md
-    python3 - "{{VERSION}}" <<'EOF'
-    import pathlib, re, sys
-    version = sys.argv[1]
-    generated = pathlib.Path("/tmp/cliff-section.md").read_text()
-    # cliff.toml's header is emitted ahead of the section; the file has its own.
-    match = re.search(r"^## \[", generated, re.M)
-    if match is None:
-        raise SystemExit("git-cliff produced no version section — are there unreleased commits?")
-    section = generated[match.start() :].strip()
-    path = pathlib.Path("CHANGELOG.md")
-    text = path.read_text()
-    if f"## [{version}]" in text:
-        raise SystemExit(f"CHANGELOG.md already has a [{version}] section")
-    existing = re.search(r"^## \[", text, re.M)
-    if existing is None:
-        raise SystemExit("CHANGELOG.md has no existing version section to insert above")
-    path.write_text(text[: existing.start()] + section + "\n\n" + text[existing.start() :])
-    EOF
-    rm -f /tmp/cliff-section.md
+    OVERRIDE="{{VERSION}}"
+    if [[ -n "${OVERRIDE}" ]]; then
+      NEXT="v${OVERRIDE#v}"
+      git switch -c "release/${NEXT}"
+      echo "Writing changelog pinned to ${NEXT}..."
+      git-cliff --unreleased --tag "${NEXT}" --prepend CHANGELOG.md
+    else
+      NEXT=$(git-cliff --bumped-version)
+      git switch -c "release/${NEXT}"
+      echo "Writing changelog for ${NEXT}..."
+      git-cliff --unreleased --bump --prepend CHANGELOG.md
+    fi
     echo ""
-    echo "Generated entry inserted. EDIT IT — group the breaking changes and say"
+    echo "Generated entry prepended. EDIT IT — group the breaking changes and say"
     echo "what a consumer has to do — then run: just release-3-pr"
 
-# The version comes from the branch release-2-changelog started, so it cannot
-# disagree with the changelog entry just written. git-cliff bumps a breaking
-# change to the next MAJOR; pre-1.0 this project treats a seam break as a minor
-# (see the Versioning section of CLAUDE.md), so the two would differ.
+# The version comes from the branch release-2-changelog started, so a pinned
+# version is given once and cannot disagree with the changelog entry.
 #
-# Bump pyproject, commit, push release/vX and open its PR
+# Step 3 — Bump the version, commit, push release/vX and open its PR
 [group('release')]
 release-3-pr:
     #!/usr/bin/env bash
     set -euo pipefail
     BRANCH=$(git branch --show-current)
     if [[ "${BRANCH}" != release/v* ]]; then
-      echo "error: not on a release/vX branch (run just release-2-changelog VERSION)" >&2
+      echo "error: not on a release/vX branch (run just release-2-changelog)" >&2
       exit 1
     fi
     VER="${BRANCH#release/}"
     # Extracted BEFORE anything is pushed: a missing or empty section should
     # abort while it is still a local problem.
-    NOTES=$(just _release-notes "${VER#v}")
+    NOTES=$(just release-notes "${VER}")
     uv version "${VER#v}"
     # Not uv.lock — it is gitignored on purpose (see .gitignore: consumers of a
     # published library resolve from pyproject.toml). `git add` on an ignored
@@ -152,7 +146,7 @@ release-3-pr:
 # worked example: cliff listed a uv_build pin that lost a merge and never
 # shipped, because the superseded commit is still unreleased-since-the-last-tag.
 #
-# Merge the release PR once CI is green, tag its merge commit, mint the GitHub release
+# Step 4 — Merge the release PR once CI is green, tag its merge commit, mint the GitHub release
 [group('release')]
 release-4-merge:
     #!/usr/bin/env bash
@@ -163,7 +157,7 @@ release-4-merge:
       exit 1
     fi
     VER="${BRANCH#release/}"
-    NOTES=$(just _release-notes "${VER#v}")
+    NOTES=$(just release-notes "${VER}")
     if [[ "$(gh pr view "${BRANCH}" --json state --jq .state)" != MERGED ]]; then
       # Exits non-zero if any check fails, so a red CI stops the release here.
       gh pr checks "${BRANCH}" --watch --fail-fast
@@ -185,33 +179,60 @@ release-4-merge:
     git push origin "${VER}"
     gh release create "${VER}" --verify-tag --title "${VER}" --notes "${NOTES}"
     git branch -D "${BRANCH}"
-    git push origin --delete "${BRANCH}"
-    echo "Released ${VER} on GitHub. Next: just build && just publish"
+    git push origin --delete "${BRANCH}" 2>/dev/null || true
+    git switch --detach "${VER}"
+    echo "Released ${VER} on GitHub; checked out at the tag"
+    echo "Next: just release-5-pypi"
 
-# Print the curated CHANGELOG.md section for VERSION, without its heading line
-# (GitHub titles the release itself).
-_release-notes VERSION:
-    #!/usr/bin/env python3
-    import pathlib, re
-    version = "{{VERSION}}"
-    text = pathlib.Path("CHANGELOG.md").read_text()
-    start = re.search(rf"^## \[{re.escape(version)}\]", text, re.M)
-    if start is None:
-        raise SystemExit(f"CHANGELOG.md has no [{version}] section — run: just release-2-changelog {version}")
-    rest = text[start.end() :]
-    following = re.search(r"^## \[", rest, re.M)
-    body = rest if following is None else rest[: following.start()]
-    body = body.split("\n", 1)[1].strip()
-    if not body:
-        raise SystemExit(f"CHANGELOG.md's [{version}] section is empty — write it before releasing")
-    print(body)
-
+# Steps 3 and 4 take their text from here. Accepts 0.7.0 or v0.7.0.
+#
+# Print a version's CHANGELOG.md section, as edited, without its heading line
 [group('release')]
-build:
+release-notes VERSION:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VER="{{VERSION}}"
+    NOTES=$(awk -v head="## [${VER#v}]" 'index($0, head) == 1 {f = 1; next} /^## \[/ {f = 0} f' CHANGELOG.md | sed '/./,$!d')
+    if [[ -z "${NOTES//[[:space:]]/}" ]]; then
+      echo "error: CHANGELOG.md has no section for ${VER#v}, or it is empty — run: just release-2-changelog" >&2
+      exit 1
+    fi
+    printf '%s\n' "${NOTES}"
+
+# Not wired into CI on purpose — a publish is permanent, so it stays a
+# deliberate manual act.
+#
+# Step 5 — Build from the checked-out tag and publish to PyPI (UV_PUBLISH_TOKEN, from .env)
+[group('release')]
+release-5-pypi:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -z "${UV_PUBLISH_TOKEN:-}" ]]; then
+      echo "error: UV_PUBLISH_TOKEN is not set (put it in .env)" >&2
+      exit 1
+    fi
+    # Build from a checked-out tag, never from a branch that has moved past it.
+    if ! VER=$(git describe --tags --exact-match HEAD 2>/dev/null); then
+      echo "error: HEAD is not a release tag; run git switch --detach vX.Y.Z" >&2
+      exit 1
+    fi
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "error: the working tree has changes; a release builds the tag as tagged" >&2
+      exit 1
+    fi
+    # `uv publish` defaults to public PyPI, but a shell configured for a
+    # private mirror redirects it silently. Check the target by allow-list.
+    ALLOWED="upload.pypi.org test.pypi.org"
+    TARGET="${UV_PUBLISH_URL:-https://upload.pypi.org/legacy/}"
+    HOST=$(printf '%s' "${TARGET}" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
+    if ! grep -qw -- "${HOST}" <<< "${ALLOWED}"; then
+      echo "error: publish target is not a public index (${HOST})" >&2
+      echo "       unset UV_PUBLISH_URL to publish to PyPI." >&2
+      exit 1
+    fi
+    # A fresh dist/: `uv publish` uploads everything in it, and a stale wheel
+    # from an earlier build would go up too.
+    rm -rf dist
     uv build
-
-# Publish to PyPI. Not wired into CI on purpose — the first publish claims the
-# name permanently, so it stays a deliberate manual act.
-[group('release')]
-publish:
     uv publish
+    echo "Published ${VER} to PyPI"
