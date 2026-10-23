@@ -27,8 +27,10 @@ if TYPE_CHECKING:
 class StructureQuery:
     """The resolved structure request a cache keys on.
 
-    ``version`` is post-``latest``-resolution and ``token`` pins the cache to
-    one publication of the bundle, so a re-publish invalidates every slot.
+    ``version`` is post-``latest``-resolution and ``token`` is the runtime's
+    ``effective_token``: one publication of the bundle, with the annotator's
+    fingerprint folded in, so a re-publish or an annotation change invalidates
+    every slot.
     """
 
     structure_type: str
