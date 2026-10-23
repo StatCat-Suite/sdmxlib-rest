@@ -51,6 +51,7 @@ src/sdmxlib_rest/
     negotiation.py       # Accept / content negotiation
     localization.py      # Accept-Language localisation
     structure_cache.py   metadata_store.py   availability_values.py  filter_shaper.py
+    overlays.py          # OverlayAnnotator: sdmxlib annotation overlays at serve time
     data/                # data-plane HELPERS (not the route — see below)
         params.py        # c[] filters, sort, dimensionAtObservation, id patterns
         projection.py    # attributes=/measures= projection, key_dimension_ids
