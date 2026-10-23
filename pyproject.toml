@@ -53,6 +53,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/StatCat-Suite/sdmxlib-rest"
 Repository = "https://github.com/StatCat-Suite/sdmxlib-rest"
+# No docs site: the README is the documentation.
+Documentation = "https://github.com/StatCat-Suite/sdmxlib-rest#readme"
 "Issue Tracker" = "https://github.com/StatCat-Suite/sdmxlib-rest/issues"
 Changelog = "https://github.com/StatCat-Suite/sdmxlib-rest/blob/main/CHANGELOG.md"
 
@@ -63,7 +65,7 @@ Changelog = "https://github.com/StatCat-Suite/sdmxlib-rest/blob/main/CHANGELOG.m
 # get a backend this package has been built with — but pinning a single minor
 # means the bound goes stale every uv release and anyone on a newer uv builds
 # with a backend the metadata says is unsupported.
-requires = ["uv_build>=0.11.6,<0.13.0"]
+requires = ["uv_build>=0.11.6,<0.14.0"]
 build-backend = "uv_build"
 
 # Pin the index to public PyPI at the project level so the lock file is
