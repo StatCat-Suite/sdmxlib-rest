@@ -36,6 +36,7 @@ jobs:
       # that action lists GitHub releases to find the version, and intermittently
       # failed with "no release for just matching version specifier 1.46.0".
       - run: uvx --from rust-just==1.46.0 just check
+      - run: uvx --from rust-just==1.46.0 just docs-build
 
   test:
     runs-on: ubuntu-latest

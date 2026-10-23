@@ -1,0 +1,58 @@
+# Publish the docs site to GitHub Pages, at
+# https://statcat-suite.github.io/sdmxlib-rest/.
+#
+# Builds on every push to main that touches what the site is made of, and can
+# be run by hand from the Actions tab. ci.yml's `check` job builds it on pull
+# requests, so a broken page fails there first.
+
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - "CHANGELOG.md"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push supersedes a queued one, but never
+# cancels a deployment already under way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv sync --group dev
+      - run: uvx --from rust-just==1.46.0 just docs-build
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

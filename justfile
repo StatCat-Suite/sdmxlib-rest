@@ -134,7 +134,22 @@ bench-profile bundle flow name:
     uv run python tools/synthetic_bench.py profile "{{bundle}}" "{{flow}}" "{{name}}"
 
 [group('test')]
-ci: check test
+ci: check test docs-build
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
+# Serve the docs site locally with live reload
+[group('docs')]
+docs:
+    uv run mkdocs serve
+
+# --strict fails on a broken link, a link to a missing heading, or a page
+# missing from the nav. It fetches sdmxlib's objects.inv, so it needs network.
+#
+# Build the docs site into site/
+[group('docs')]
+docs-build:
+    uv run mkdocs build --strict
 
 # ── Release ───────────────────────────────────────────────────────────────────
 # The library versions independently of any consumer: a consumer pins a range

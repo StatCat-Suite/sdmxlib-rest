@@ -214,6 +214,7 @@ just ci        # full gate
 just typecheck # pyrefly alone (also part of `check`)
 just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not in `ci`
 just bench-synthetic [shape]  # the same tier on a synthetic bundle: `large`, or `census` for a census-sized geography
+just docs      # serve the docs site (docs/, mkdocs.yml); `just docs-build` is the strict build in `ci`
 ```
 
 ## Versioning
@@ -226,6 +227,15 @@ a major. `just release-1-preview` through `release-5-pypi`: a release is a
 3-4 publish the *curated* CHANGELOG.md section (`just release-notes VERSION`),
 not the regenerated one; step 5 builds the checked-out tag and uploads it to
 PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
+
+## Docs site
+
+`docs/` and `mkdocs.yml` build https://statcat-suite.github.io/sdmxlib-rest/,
+deployed by `.github/workflows/docs.yml`. `mkdocs.yml` carries the StatCat
+Suite block between its "Suite configuration" markers, copied from the hub
+(https://statcat-suite.github.io/sites/); change it there first. The guide
+pages restate behaviour, so a change to a seam, a route or `create_app`
+updates the page that describes it.
 
 ## Related repos
 
