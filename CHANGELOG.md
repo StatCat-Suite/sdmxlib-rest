@@ -5,6 +5,78 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-10-23
+
+Annotations can now change on a running deployment without serving stale
+responses. An annotator that reports a fingerprint re-keys the structure
+cache, the splices and the ETag, and `OverlayAnnotator` uses that to apply
+sdmxlib annotation overlays at serve time. Unfiltered `componentID=all`
+availability requests are answered in one scan. Every change adds to the API;
+a 0.7.0 consumer upgrades without code changes, and its ETags stay the same.
+
+**Needs** the same dependencies as 0.7.0: Python `>=3.14` and sdmxlib
+`>=0.72,<0.73`.
+
+### Features
+
+- **Annotator fingerprints** (GH-40, closes GH-2). A `MessageAnnotator` may
+  also implement `SupportsFingerprint`: `fingerprint() -> str`, which changes
+  whenever `annotate` would produce different output. It is called on every
+  request, so return a cached value or version counter; do no I/O.
+  - `CatalogRuntime.effective_token` is a sha256 over `token` and the
+    fingerprint. The structure cache (`StructureQuery.token`), splices
+    (`SpliceContext.token`) and the ETag key on it; `get_effective_token` is
+    its request dependency. With no fingerprint it equals `token`, so ETags
+    are unchanged from 0.7.0.
+  - `AvailabilityKey` and `annotate(token=)` keep the bare `token`:
+    annotations cannot change availability, and an annotator can memoise per
+    publication.
+  - With a fingerprint, `Last-Modified` is the later of the publication time
+    and the moment this process first saw the current fingerprint, at least
+    one second past the previous value. A restart counts as a change, so
+    clients refetch once after it.
+  - `CompositeMessageAnnotator` runs several annotators in order; its
+    fingerprint combines theirs. `annotator_fingerprint(annotator)` reads any
+    annotator's fingerprint, or `""`.
+- **`OverlayAnnotator`** (GH-41, `sdmxlib_rest.overlays`) applies
+  `sdmxlib.bundle.Overlay` documents to every structure message before it is
+  serialised. Build it with `OverlayAnnotator.from_files(paths, merge=...)`
+  and swap overlays on a running deployment with `replace(overlays)`. Its
+  fingerprint is the overlays' digests, so `effective_token` equals sdmxlib's
+  `effective_token(manifest, overlays)`. Each request the structure cache does
+  not answer copies every artefact an entry selects, so keep selectors
+  specific, or fold a settled overlay into the bundle with
+  `sdmxlib.bundle.fold_overlays`.
+
+### Performance
+
+- **Unfiltered `componentID=all` availability runs one combined aggregate**
+  (GH-43, closes GH-36) where it ran one `DISTINCT` per dimension plus a
+  `COUNT`. On DuckDB 2 this is about 15% faster on a ~500M-row census lake
+  (0.85x on Linux, 0.78-0.85x on macOS). On a bundle with few rows and a very
+  large geography it is slower: the synthetic `census` shape (20M rows, a
+  580k-code geography) answers in 0.3-0.8 s where the loop took 0.3-0.4 s.
+
+### Known costs
+
+- **Full references on a very large codelist are expensive.** Since 0.7.0
+  (GH-33), `detail=full` with `references=children` returns every code of
+  every referenced codelist. On a 580k-code geography a dataflow request
+  returns 95 MB in 3.8 s; with `detail=referencestubs` it takes 32 ms.
+
+### Testing
+
+- **Synthetic bundle tier** (GH-39, GH-42). `just bench-synthetic [shape]
+  [seed]` builds a synthetic bundle from `tests/bench/shapes/` and runs the
+  bundle tier on it: `large`, or `census`, modelled on the public 2021 Census
+  Profile. `just bench-profile` writes a real bundle's shape to the gitignored
+  `tests/bench/shapes/local/`. A structure-route tier checks stubs, stubbed
+  references, French names and SDMX-ML against the bundle's largest codelist.
+  `.github/workflows/bench.yml` runs the tier on Linux, without blocking a
+  merge.
+- **Cold-cache tests skip where eviction does not cool the cache** (GH-44),
+  as on a VM whose host caches its disk, and name the times measured.
+
 ## [0.7.0] - 2026-10-23
 
 Moves to sdmxlib 0.72, which runs on DuckDB 2 and Python 3.14 and publishes a
