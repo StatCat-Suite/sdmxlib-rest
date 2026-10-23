@@ -2,7 +2,8 @@
 
 Opt-in: set ``SDMXLIB_REST_BENCH_BUNDLE`` to a bundle directory containing
 ``lake.ducklake``. Without it every test here skips, so ``just test-all`` stays
-green on a machine that has no bundle.
+green on a machine that has no bundle. ``just bench-synthetic`` builds one from
+a shape in ``tests/bench/shapes/`` and runs this tier on it (GH-37).
 
 **Read-only ATTACH rather than a copy.** sdmxlib's equivalent tier copies the
 bundle first because ``LocalRegistry.bundle()`` opens ``meta.duckdb``

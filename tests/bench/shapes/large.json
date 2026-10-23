@@ -1,0 +1,14 @@
+{
+  "dimensions": [
+    {"codes": 20000, "depth": 3, "fanout": [3, 40]},
+    {"codes": 3, "depth": 1, "fanout": [2, 10]},
+    {"codes": 12, "depth": 1, "fanout": [2, 10]},
+    {"codes": 50, "depth": 2, "fanout": [2, 10]},
+    {"codes": 8, "depth": 1, "fanout": [2, 10]}
+  ],
+  "observations": 20000000,
+  "periods": 6,
+  "languages": ["en", "fr"],
+  "attributes": 2,
+  "annotated": 0.1
+}
