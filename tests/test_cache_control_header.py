@@ -35,8 +35,8 @@ class _FakeProvider:
 
     def open(self) -> OpenedCatalog:
         return OpenedCatalog(
-            registry=None,  # type: ignore[arg-type] — a set token means the registry's manifest is never read
-            meta_conn=None,  # type: ignore[arg-type]
+            registry=None,  # pyrefly: ignore[bad-argument-type] — a set token means the registry is never read
+            meta_conn=None,  # pyrefly: ignore[bad-argument-type]
             build_id="testbuild",
             built_at="2026-06-16T00:00:00+00:00",
             token="testbuild",  # noqa: S106 — a cache key, not a credential

@@ -29,7 +29,6 @@ ignore = [
   "ISC001", # single-line-implicit-string-concatenation — handled by formatter
 
   # ── Type annotations ──────────────────────────────────────────────────────
-  "ANN401", # any-type — Any is legitimate for **kwargs and dunder args
   "FA",     # flake8-future-annotations — Python 3.12+, no __future__ needed
 
   # ── Docstring style ───────────────────────────────────────────────────────

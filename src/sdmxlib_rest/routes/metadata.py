@@ -128,9 +128,9 @@ _DETAIL_EXAMPLES: dict[str, Example] = {
 }
 
 
-def _serialise(sets: Sequence[object], accept: str | None, accept_language: str | None = None) -> Response:
+def _serialise(sets: Sequence[sl.MetadataSet], accept: str | None, accept_language: str | None = None) -> Response:
     """Wrap MetadataSets in a MetadataMessage and serialise per Accept (+ Accept-Language for JSON)."""
-    msg = MetadataMessage(metadata_sets=sets)  # type: ignore[arg-type]
+    msg = MetadataMessage(metadata_sets=list(sets))
     # Browser default Accept includes `application/xml` — that's not a real
     # SDMX-ML request; fall through to JSON so the browser renders inline.
     if accept and "xml" in accept.lower() and not is_browser_request(accept):

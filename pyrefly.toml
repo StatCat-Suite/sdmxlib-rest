@@ -71,8 +71,8 @@ unused-type-ignore = true
 # - Deliberate monkey-patching: `middleware/compression.py` patches private
 #   `zipfile` internals (3), and `app.py` assigns `app.openapi`, FastAPI's
 #   documented way to customise the schema.
-# - Messages assembled from untyped registry reads: `routes/metadata.py`
-#   `_serialise`, and `routes/structure.py`'s slot-keyed `StructureMessage`.
+# - `routes/structure.py` builds `StructureMessage(**slots)` from a dict keyed
+#   by slot name, which no static type can tie to each slot's artefact class.
 # - `routes/structure.py::_evolve`: pyrefly's attrs plugin resolves `evolve`'s
 #   first argument against a concrete attrs class and has no spelling for "some
 #   attrs instance", which is all the `object`-typed artefact helpers can
