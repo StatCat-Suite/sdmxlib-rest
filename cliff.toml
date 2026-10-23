@@ -1,7 +1,12 @@
 [changelog]
+# Must match CHANGELOG.md's own header exactly: `git-cliff --prepend` writes
+# this header and skips the file's only when the two are identical. A mismatch
+# leaves CHANGELOG.md with two headers.
 header = """
 # Changelog\n
-All notable changes to this project will be documented in this file.\n
+All notable changes to this project are documented here.\n
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n
 """
 body = """
 {% if version %}\
@@ -47,3 +52,8 @@ skip_tags = ""
 ignore_tags = ""
 topo_order = false
 sort_commits = "oldest"
+
+[bump]
+# Pre-1.0, a breaking change bumps the minor, not the major (CLAUDE.md,
+# Versioning). git-cliff's default proposed 1.0.0 for 0.7.0.
+breaking_always_bump_major = false

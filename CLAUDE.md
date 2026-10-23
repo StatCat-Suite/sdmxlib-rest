@@ -149,10 +149,12 @@ just bench <bundle-dir>   # the bundle tier — ratios against a real lake, not 
 
 Versions independently of any consumer — a consumer pins a range and upgrades
 deliberately. Pre-1.0, breaking a seam Protocol is a minor bump; after 1.0 it is
-a major. `just release-1-preview` through `release-4-merge`: a release is a
+a major. `just release-1-preview` through `release-5-pypi`: a release is a
 `release/vX` PR like any other change. git-cliff drafts the changelog entry
-(steps 1-2); step 4 publishes the *curated* CHANGELOG.md section, not the
-regenerated one.
+(steps 1-2, prepended, with a pre-1.0 breaking change bumping the minor); steps
+3-4 publish the *curated* CHANGELOG.md section (`just release-notes VERSION`),
+not the regenerated one; step 5 builds the checked-out tag and uploads it to
+PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
 
 ## Related repos
 
