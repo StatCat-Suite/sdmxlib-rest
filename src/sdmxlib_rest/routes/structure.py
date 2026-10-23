@@ -21,6 +21,7 @@ from sdmxlib_rest.negotiation import ensure_acceptable, is_browser_request
 from sdmxlib_rest.responses.asof import AsOf, reject_asof
 from sdmxlib_rest.responses.empty import to_204_if_empty
 from sdmxlib_rest.runtime import (
+    get_effective_token,
     get_message_annotator,
     get_meta_conn,
     get_registry,
@@ -362,6 +363,7 @@ async def get_structure(
     registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     token: Annotated[str, Depends(get_token)],
+    effective_token: Annotated[str, Depends(get_effective_token)],
     splices: Annotated[SpliceRegistry, Depends(get_splices)],
     cache: Annotated[StructureCache, Depends(get_structure_cache)],
     annotator: Annotated[MessageAnnotator, Depends(get_message_annotator)],
@@ -431,7 +433,8 @@ async def get_structure(
 
         # Consumer-owned response cache (a pod-lifetime speedup for expensive
         # shapes — large codelists, slow-to-materialise hierarchies). The bundle is
-        # fixed per publication (``token``), so cached bytes are stable for the process
+        # fixed per publication and annotator fingerprint (``effective_token``),
+        # so cached bytes are stable for the process
         # lifetime; a bare catalog gets the no-op cache and always renders.
     cache_query = StructureQuery(
         structure_type=structureType,
@@ -442,7 +445,7 @@ async def get_structure(
         references=references,
         accept=accept,
         accept_language=accept_language,
-        token=token,
+        token=effective_token,
     )
     cached = cache.lookup(cache_query)
     if cached is not None:
@@ -524,7 +527,7 @@ async def get_structure(
     ctx = SpliceContext(
         registry=registry,
         conn=conn,
-        token=token,
+        token=effective_token,
         agency_id=agencyID,
         resource_id=resourceID,
         version=version,

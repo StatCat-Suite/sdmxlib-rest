@@ -46,6 +46,8 @@ class SpliceContext:
 
     registry: sl.LocalRegistry
     conn: duckdb.DuckDBPyConnection
+    # The runtime's `effective_token`, so a splice that caches keys on
+    # annotation changes as well as publications.
     token: str
     agency_id: str = ""
     resource_id: str = ""

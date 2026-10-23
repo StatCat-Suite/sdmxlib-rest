@@ -15,6 +15,8 @@ middleware) hold the `CatalogRuntime` instance directly.
 
 from __future__ import annotations
 
+import hashlib
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from attrs import define, field
@@ -22,7 +24,7 @@ from fastapi import Request
 
 from sdmxlib_rest.availability_values import NullAvailabilityValues
 from sdmxlib_rest.filter_shaper import NullComponentFilterShaper
-from sdmxlib_rest.message_annotator import NullMessageAnnotator
+from sdmxlib_rest.message_annotator import NullMessageAnnotator, annotator_fingerprint
 from sdmxlib_rest.metadata_store import NullMetadataStore
 from sdmxlib_rest.splice import SpliceRegistry
 from sdmxlib_rest.structure_cache import NullStructureCache
@@ -65,6 +67,11 @@ class CatalogRuntime:
     filter_shaper: ComponentFilterShaper = field(factory=NullComponentFilterShaper)
     message_annotator: MessageAnnotator = field(factory=NullMessageAnnotator)
     _opened: OpenedCatalog | None = field(default=None, init=False)
+    # The annotator fingerprint `last_modified` last saw, and when it first saw
+    # it. A benign race: two requests seeing a new fingerprint at once both
+    # record "now".
+    _fingerprint_seen: str = field(default="", init=False)
+    _fingerprint_since: datetime | None = field(default=None, init=False)
 
     def ensure_open(self) -> OpenedCatalog:
         """Open the registry on first use; return the cached handle thereafter."""
@@ -122,6 +129,23 @@ class CatalogRuntime:
         return manifest.token if manifest is not None else self._opened.build_id
 
     @property
+    def effective_token(self) -> str:
+        """``token`` with the annotator's fingerprint folded in, or ``""`` if not open (non-forcing).
+
+        What the structure cache, the splices and the ETag key on (GH-2). Equal
+        to ``token`` while the annotator has no fingerprint, so ETags stay
+        byte-identical for a consumer that never sets one. The folding mirrors
+        sdmxlib's ``effective_token`` for overlays: a sha256 over the token and
+        the fingerprint, one per line. `AvailabilityKey` keeps the bare
+        ``token``: annotations cannot change availability.
+        """
+        token = self.token
+        fingerprint = annotator_fingerprint(self.message_annotator)
+        if not token or not fingerprint:
+            return token
+        return hashlib.sha256(f"{token}\n{fingerprint}".encode()).hexdigest()
+
+    @property
     def last_modified(self) -> str:
         """ISO-8601 ``Last-Modified`` source, or ``""`` if not open (non-forcing).
 
@@ -129,9 +153,39 @@ class CatalogRuntime:
         timestamp. A provider's ``built_at`` can stay put across a republish
         that minted a new token, and an ``If-Modified-Since`` would then 304 a
         stale body that the ETag correctly misses.
+
+        With an annotator fingerprint it is the later of that and the moment
+        this process first saw the current fingerprint, so an annotation change
+        moves it too. A restart counts as a change: clients refetch once rather
+        than risk a 304 for annotations they never saw.
         """
         if self._opened is None:
             return ""
+        published = self._published_at()
+        fingerprint = annotator_fingerprint(self.message_annotator)
+        if not fingerprint:
+            return published
+        if fingerprint != self._fingerprint_seen or self._fingerprint_since is None:
+            now = datetime.now(UTC)
+            previous = self._fingerprint_since
+            # HTTP dates have whole seconds, so a change inside the second the
+            # previous fingerprint was first seen must still move the header.
+            if previous is not None and now < previous + timedelta(seconds=1):
+                now = previous + timedelta(seconds=1)
+            self._fingerprint_seen = fingerprint
+            self._fingerprint_since = now
+        since = self._fingerprint_since
+        try:
+            published_at = datetime.fromisoformat(published)
+        except ValueError:
+            return since.isoformat()
+        if published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=UTC)
+        return max(published_at, since).isoformat()
+
+    def _published_at(self) -> str:
+        """The publication timestamp `last_modified` starts from."""
+        assert self._opened is not None  # noqa: S101 — callers check first
         if self._opened.token:
             return self._opened.built_at
         manifest = self._opened.registry.manifest
@@ -184,6 +238,11 @@ def get_build_id(request: Request) -> str:
 def get_token(request: Request) -> str:
     """FastAPI dependency: what caches key on for the open bundle (``""`` before open)."""
     return get_runtime(request).token
+
+
+def get_effective_token(request: Request) -> str:
+    """FastAPI dependency: ``token`` with the annotator's fingerprint folded in."""
+    return get_runtime(request).effective_token
 
 
 def get_structure_cache(request: Request) -> StructureCache:

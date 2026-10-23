@@ -35,7 +35,7 @@ default. A bare consumer implements only the first one.
 | `AvailabilityValues` | precomputed availability values, for unfiltered requests | always scans |
 | `MetadataStore` | reference-metadata lookups | returns nothing |
 | `ComponentFilterShaper` | rewrite a parsed filter before it is queried | identity |
-| `MessageAnnotator` | pre-serialise message annotation | no-op |
+| `MessageAnnotator` | pre-serialise message annotation; with `SupportsFingerprint`, annotations that change at runtime re-key the structure cache and ETags | no-op |
 
 The defaults are all *inert*, not *broken*: a consumer that installs none of
 them gets a correct service, just one that recomputes more than it needs to.

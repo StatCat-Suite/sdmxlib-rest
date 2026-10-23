@@ -2,10 +2,11 @@
 
 A publication of the bundle is immutable — every (URL + query string +
 Accept header) deterministically maps to one byte-stream until the
-bundle is re-published, which mints a new ``token``. That makes conditional
+bundle is re-published, which mints a new ``token``, or an annotator's
+fingerprint changes (GH-2); ``effective_token`` folds in both. That makes conditional
 GET trivial:
 
-- ETag is a hash of ``(token, path, query string, Accept)`` — different
+- ETag is a hash of ``(effective_token, path, query string, Accept)`` — different
   publications produce different ETags; different responses from the same
   one do too (because path/query/Accept differ).
 - Last-Modified is the publication's timestamp (``runtime.last_modified``).
@@ -34,7 +35,8 @@ if TYPE_CHECKING:
 class ConditionalGetMiddleware:
     """ASGI middleware adding ETag / Last-Modified + handling If-None-Match / If-Modified-Since.
 
-    Reads the publication's ``token`` and ``last_modified`` off the injected
+    Reads ``effective_token`` (the publication's token with any annotator
+    fingerprint folded in, GH-2) and ``last_modified`` off the injected
     `CatalogRuntime`; before the catalog is open the middleware passes
     through untouched. ``version`` is the consumer app's version string: it
     busts every ETag on release so a response-shape change ships new ETags
@@ -65,7 +67,7 @@ class ConditionalGetMiddleware:
             # deterministic ETag, matching the old ``manifest is None`` check.)
             await self.app(scope, receive, send)
             return
-        token = self.runtime.token
+        token = self.runtime.effective_token
 
         headers: dict[bytes, str] = {k.lower(): v.decode("latin-1") for k, v in scope["headers"]}
         accept = headers.get(b"accept", "")

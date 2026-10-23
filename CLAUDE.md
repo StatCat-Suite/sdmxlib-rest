@@ -38,7 +38,7 @@ data-plane helper needs — exists only there and no sdmxlib Protocol covers it.
 | `AvailabilityValues` | `availability_values.py` | `NullAvailabilityValues` |
 | `MetadataStore` | `metadata_store.py` | `NullMetadataStore` |
 | `ComponentFilterShaper` | `filter_shaper.py` | `NullComponentFilterShaper` |
-| `MessageAnnotator` | `message_annotator.py` | `NullMessageAnnotator` |
+| `MessageAnnotator` (+ optional `SupportsFingerprint`) | `message_annotator.py` | `NullMessageAnnotator` |
 
 ## Layout
 
