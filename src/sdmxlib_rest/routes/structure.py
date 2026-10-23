@@ -674,7 +674,7 @@ async def get_structure_item(
     )
 
 
-def _evolve(artefact: object, **changes: Any) -> object:
+def _evolve(artefact: object, **changes: object) -> object:
     """``attrs.evolve`` for an artefact whose static type is only ``object``.
 
     The stub/materialise helpers below deal in heterogeneous SDMX artefacts,
@@ -1122,7 +1122,7 @@ def _build_message_many(artefacts: list[object]) -> StructureMessage:
         if not isinstance(slot, str):
             continue
         slots.setdefault(slot, []).append(art)
-    return StructureMessage(**slots)  # type: ignore[arg-type]
+    return StructureMessage(**slots)  # pyrefly: ignore[bad-argument-type]
 
 
 def _version_key(version: str) -> tuple[int, ...]:

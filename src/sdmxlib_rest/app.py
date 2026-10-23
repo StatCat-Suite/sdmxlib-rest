@@ -348,7 +348,7 @@ def _install_vendor_marker_hook(app: FastAPI) -> None:
             spec["x-vendor-markers-applied"] = True
         return spec
 
-    app.openapi = _openapi_with_vendor  # type: ignore[method-assign]
+    app.openapi = _openapi_with_vendor  # pyrefly: ignore[method-assign]
 
 
 def _install_docs(app: FastAPI, settings: RestSettings, mounts: Sequence[Mount]) -> None:

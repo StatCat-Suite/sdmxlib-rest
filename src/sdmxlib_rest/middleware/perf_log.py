@@ -47,7 +47,7 @@ are catalog identifiers, not personal data).
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -62,7 +62,7 @@ class _Sink(Protocol):
     module docstring.
     """
 
-    def __call__(self, msg: str, /, **kwargs: Any) -> None: ...
+    def __call__(self, msg: str, /, **kwargs: object) -> None: ...
 
 
 class PerfLogMiddleware:

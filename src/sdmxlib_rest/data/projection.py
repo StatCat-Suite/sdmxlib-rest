@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import weakref
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import sdmxlib as sl
 from attrs import evolve
@@ -142,7 +142,7 @@ def project_arrow_batches(
         yield batch.select(present)
 
 
-def materialise_dsd_for_flow(registry: sl.LocalRegistry, flow_urn: Any) -> sl.DataStructure | None:
+def materialise_dsd_for_flow(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.DataStructure | None:
     """Resolve ``flow_urn`` to its bound DSD, materialised.
 
     sdmxlib's SDMX-JSON writers need the DSD object (not just a URN) to pull
@@ -161,7 +161,7 @@ def materialise_dsd_for_flow(registry: sl.LocalRegistry, flow_urn: Any) -> sl.Da
 
 def key_dimension_ids(
     registry: sl.LocalRegistry,
-    flow_urn: Any,
+    flow_urn: sl.SdmxUrn[sl.Dataflow],
     binding: sl.DataflowBinding,
 ) -> list[str]:
     """Resolve the flow's key-dimension ids in DSD order.
