@@ -50,7 +50,8 @@ dependencies = [
     "duckdb>=2.0",
     "polars>=2.0",
     "pyarrow>=26",
-    "orjson>=3.11",
+    # 3.11.1: the first with CPython 3.14 wheels; 3.11.0 builds only on nightly Rust.
+    "orjson>=3.11.1",
     # 0.7.3: 0.7.0 calls `asyncio.iscoroutinefunction`, deprecated on 3.14.
     "loguru>=0.7.3",
     # Streaming zip + a faster DEFLATE backend for the CSV export path.
