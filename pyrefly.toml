@@ -29,7 +29,7 @@ python-interpreter = ".venv/bin/python"
 # src-layout. "." is on the search path so tests can import `tests.conftest`,
 # as they do at runtime under pytest.
 search-path = ["src", "."]
-project-includes = ["src", "tests"]
+project-includes = ["src", "tests", "tools"]
 project-excludes = ["**/__pycache__", "**/.venv", "**/node_modules"]
 
 # Governance model, deliberately the same one ruff runs under: turn EVERYTHING

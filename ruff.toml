@@ -68,6 +68,9 @@ ignore = [
 "__init__.py" = ["E402", "F401", "I"]
 # Tests: skip docstrings, annotations, security checks, and unused-arg checks
 "tests/**/*.py" = ["D", "ANN", "S101", "ARG", "SLF001", "PLC0415"]
+# Tools: standalone scripts run with `python tools/x.py`, not a package; they
+# print their report and call `git` from PATH.
+"tools/*.py" = ["INP001", "T201", "S607"]
 
 [lint.pydocstyle]
 convention = "google"

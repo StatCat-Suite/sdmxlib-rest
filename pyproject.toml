@@ -79,6 +79,13 @@ default = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Unregistered marks and config typos are errors, not warnings: a typo'd
+# `pytestmark` would otherwise drop a whole file out of `just test` (`-m unit`)
+# and an always-failing test in it would pass the gate by never running.
+strict = true
+# A warning that cannot fail is a warning nobody reads. Keep this list empty;
+# an ignore list is where it decays.
+filterwarnings = ["error"]
 markers = [
   "unit: fast unit tests (no I/O)",
   "bundle: benchmarks against a real bundle (set SDMXLIB_REST_BENCH_BUNDLE); skipped without one",
