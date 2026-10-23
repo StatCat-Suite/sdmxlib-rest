@@ -123,17 +123,31 @@ def test_the_runtime_keys_on_the_published_manifest(
     assert runtime.build_id == "synthetic-7"
 
 
-def test_the_dataflow_is_served_with_its_structure(client: TestClient) -> None:
-    resp = client.get(f"/structure/dataflow/{_FLOW_PATH}", params={"references": "all"})
+@pytest.mark.parametrize("references", ["children", "descendants", "all"])
+def test_detail_full_returns_the_referenced_codelists_in_full(client: TestClient, references: str) -> None:
+    """GH-32: `detail` and `references` are orthogonal, so `full` means full references too."""
+    resp = client.get(f"/structure/dataflow/{_FLOW_PATH}", params={"references": references})
 
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert [df["id"] for df in data["dataflows"]] == ["DF_SYNTHETIC"]
     assert len(data["dataStructures"]) == 1
-    # A codelist per dimension and per attribute. Referenced codelists come
-    # back as stubs whatever `detail` says (`_walk_references_as_stubs`), so
-    # their ids are what this can check.
-    assert sorted(cl["id"] for cl in data["codelists"]) == ["CL_ATTR_1", "CL_DIM_1", "CL_DIM_2"]
+    codes = {cl["id"]: len(cl.get("codes", [])) for cl in data["codelists"]}
+    # A codelist per dimension and per attribute, each with every code.
+    assert codes["CL_DIM_1"] == _SHAPE.dimensions[0].codes
+    assert codes["CL_DIM_2"] == _SHAPE.dimensions[1].codes
+    assert codes["CL_ATTR_1"] > 0
+    assert len(codes) == len(_DIMENSIONS) + _SHAPE.attributes
+
+
+@pytest.mark.parametrize("detail", ["referencestubs", "referencecompletestubs", "referencepartial", "allstubs"])
+def test_a_stub_detail_returns_the_referenced_codelists_as_stubs(client: TestClient, detail: str) -> None:
+    resp = client.get(f"/structure/dataflow/{_FLOW_PATH}", params={"references": "all", "detail": detail})
+
+    assert resp.status_code == 200
+    codelists = resp.json()["data"]["codelists"]
+    assert sorted(cl["id"] for cl in codelists) == ["CL_ATTR_1", "CL_DIM_1", "CL_DIM_2"]
+    assert not any(cl.get("codes") for cl in codelists)
 
 
 def test_a_hierarchical_codelist_keeps_its_parents(client: TestClient) -> None:
