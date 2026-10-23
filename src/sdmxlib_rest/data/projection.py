@@ -3,7 +3,7 @@
 Projection is applied by trimming the binding's column maps before they reach
 the serialiser: the underlying query still ``SELECT *``s, and the writer emits
 only the columns the trimmed binding lists. The arrow/parquet path needs the
-projection applied to the batches themselves, which :func:`project_arrow_batches`
+projection applied to the batches themselves, which `project_arrow_batches`
 does.
 """
 

@@ -117,7 +117,9 @@ the sequence; that assertion is deliberate, not incidental.
 
 ## Style
 
-- Docstrings: Google convention. Skip docstrings on trivial getters.
+- Docstrings: Google convention, plain — cross-references in single backticks
+  (`` `CatalogRuntime` ``), no Sphinx roles or NumPy sections
+  (`just check-docstrings`). Skip docstrings on trivial getters.
 - No comments that restate the code. Only WHY-comments.
 - Conventional commits — `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
 - Tests are plain functions; module-level `pytestmark = pytest.mark.unit`.
@@ -138,7 +140,7 @@ carrying a "Moved from GitLab #N" line.
 ## Common commands
 
 ```bash
-just check     # ruff (warnings fail too) + Any ratchet + index guard + pyrefly
+just check     # ruff (warnings fail too) + docstrings + Any ratchet + index guard + pyrefly
 just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop with
                #   `uv run python tools/count_any.py --write`
 just test      # unit tests

@@ -1,7 +1,7 @@
 """Query-parameter parsing for the SDMX-REST data plane.
 
 Everything here is driven by the request's query string plus a
-:class:`sdmxlib.DataflowBinding` — no catalog-specific knowledge. A consumer
+`sdmxlib.DataflowBinding` — no catalog-specific knowledge. A consumer
 wires these into its own ``/data`` handler; the library does not own the
 route (see issue #34 for the boundary rationale).
 """
@@ -156,7 +156,7 @@ def build_non_eq_where(
     Resolves each component id against the binding's dimension + attribute
     column maps; unknown ids raise ``HTTPException(400)`` so callers see
     exactly which one was wrong. Each ``(op, value)`` becomes one
-    ``WHERE`` fragment using the template in :data:`NON_EQ_OPERATOR_SQL`.
+    ``WHERE`` fragment using the template in `NON_EQ_OPERATOR_SQL`.
 
     For ``LIKE``-based operators (``co``/``nc``/``sw``/``ew``) the user-supplied
     value is escaped (``%``, ``_``, ``\\``) and wrapped in ``%`` wildcards per

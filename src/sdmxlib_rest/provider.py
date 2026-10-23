@@ -1,9 +1,9 @@
 """The catalog-provider seam.
 
 The library owns the HTTP shape of SDMX-REST over a
-:class:`sdmxlib.LocalRegistry`; it does NOT know how that registry is
-opened. A consumer supplies a :class:`CatalogProvider` whose :meth:`open`
-returns an :class:`OpenedCatalog` — the registry, a raw DuckDB connection,
+`sdmxlib.LocalRegistry`; it does NOT know how that registry is
+opened. A consumer supplies a `CatalogProvider` whose `open`
+returns an `OpenedCatalog` — the registry, a raw DuckDB connection,
 and an opaque build manifest.
 
 **The registry must reach its own observations.** ``/availability`` reads
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 class OpenedCatalog:
     """A live registry plus its meta connection and build manifest.
 
-    Returned by :meth:`CatalogProvider.open`. ``close`` runs the
+    Returned by `CatalogProvider.open`. ``close`` runs the
     provider-supplied teardown (e.g. closing a statcatlib ``Catalog``); it is
     a no-op when the provider passes none.
     """
@@ -74,9 +74,9 @@ class OpenedCatalog:
 
 @runtime_checkable
 class CatalogProvider(Protocol):
-    """Opens an :class:`OpenedCatalog`. Implemented by the consumer.
+    """Opens an `OpenedCatalog`. Implemented by the consumer.
 
-    Called once per :class:`~sdmxlib_rest.runtime.CatalogRuntime` lifetime
+    Called once per `CatalogRuntime` lifetime
     (lazily, on first use or at lifespan startup). Implementations own all
     storage-backend concerns — bundle layout, credentials, connection
     tuning — and must return a registry the generic routes can query plus

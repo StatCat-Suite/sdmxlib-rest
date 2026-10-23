@@ -8,8 +8,8 @@ an ordered list of splices in one parse/encode pass.
 
 A **splice** is ``(parsed_json: dict, ctx: SpliceContext) -> bool`` (sync or
 async) that mutates ``parsed_json`` in place and returns whether it changed
-anything. Consumers register their splices in a :class:`SpliceRegistry`; the
-generic route calls :func:`run_structure_splices`, which runs them in order.
+anything. Consumers register their splices in a `SpliceRegistry`; the
+generic route calls `run_structure_splices`, which runs them in order.
 
 Instead of a hardcoded import-and-call list, the order is a registry the consumer owns,
 and the single ``orjson.loads → mutate-each → orjson.dumps`` cycle lives here.

@@ -40,6 +40,15 @@ typecheck:
 checkfmt:
     uv run ruff format --check src tests tools
 
+# Ruff's `convention = "google"` checks a docstring's structure and never its
+# markup, so it let 61 Sphinx roles accumulate here. Three arms: Sphinx roles
+# and RST literal blocks, NumPy section headers, and pydoclint's DOC003.
+#
+# Fail if a docstring in src/ is not plain Google style
+[group('dev')]
+check-docstrings:
+    uv run python tools/check_docstrings.py --check
+
 # ANN401 sees a bare `Any` but not one inside a generic argument
 # (`dict[str, Any]`), so the count of those may only go down, and going down
 # must be recorded (`uv run python tools/count_any.py --write`).
@@ -61,7 +70,7 @@ check-indexes:
 
 # Lint + typecheck (inner dev loop)
 [group('dev')]
-check: lint checkfmt check-any check-indexes typecheck
+check: lint checkfmt check-docstrings check-any check-indexes typecheck
 
 # Format code
 [group('dev')]

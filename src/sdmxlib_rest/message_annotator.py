@@ -9,9 +9,9 @@ on the **model**, ahead of ``to_json`` / ``to_xml``, the annotation reaches
 JSON splice, which only ever touches the JSON body.
 
 The library does not know which annotations a given catalogue wants to emit, so
-a consumer implements :class:`MessageAnnotator`; the default
-:class:`NullMessageAnnotator` returns the message untouched. The annotator is
-carried on the :class:`~sdmxlib_rest.runtime.CatalogRuntime` and applied by the
+a consumer implements `MessageAnnotator`; the default
+`NullMessageAnnotator` returns the message untouched. The annotator is
+carried on the `CatalogRuntime` and applied by the
 structure route right after it builds the message and before it serialises.
 
 The runtime owns the DuckDB connection (structural + metadata linkage live in

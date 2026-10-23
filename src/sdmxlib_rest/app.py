@@ -12,7 +12,7 @@ So this module owns the assembly and leaves every catalog-shaped decision to
 the caller: which routers to include and in what order, what extra middleware
 to layer, which sub-apps to mount, and what to warm at startup.
 
-See :func:`create_app`. The ordering invariant is documented at its call to
+See `create_app`. The ordering invariant is documented at its call to
 ``_install_middleware`` and is the single most important thing here — #1
 tracks giving it regression coverage.
 """
@@ -116,7 +116,7 @@ def library_routers() -> tuple[APIRouter, ...]:
     """The routers this library owns: structure, metadata, availability.
 
     Returned in a sensible default order. A consumer that interleaves its own
-    routers should pass an explicit list to :func:`create_app` instead — route
+    routers should pass an explicit list to `create_app` instead — route
     inclusion order is preserved verbatim and determines OpenAPI path order.
     """
     return (structure.router, metadata.router, availability.router)
@@ -152,10 +152,10 @@ def create_app(
         runtime: Carries the provider and every seam (splices, caches, filter
             shaper, annotator). Install those before calling; they are read per
             request, so later mutation works but is rarely what you want.
-        settings: The generic slice of configuration — see :class:`RestSettings`.
+        settings: The generic slice of configuration — see `RestSettings`.
         routers: Routers to include, **in order**. Order is preserved because it
             determines the order paths appear in the OpenAPI document. Use
-            :func:`library_routers` for the standard trio, or interleave your own.
+            `library_routers` for the standard trio, or interleave your own.
         outer_middleware: Extra middleware layered just inside CORS — i.e.
             outside everything else, so it observes the client's original
             request and the fully-encoded response. Logging taps belong here.

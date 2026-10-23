@@ -35,7 +35,7 @@ class ConditionalGetMiddleware:
     """ASGI middleware adding ETag / Last-Modified + handling If-None-Match / If-Modified-Since.
 
     Reads the publication's ``token`` and ``last_modified`` off the injected
-    :class:`CatalogRuntime`; before the catalog is open the middleware passes
+    `CatalogRuntime`; before the catalog is open the middleware passes
     through untouched. ``version`` is the consumer app's version string: it
     busts every ETag on release so a response-shape change ships new ETags
     even though the bundle's ``token`` is stable across code deploys.
@@ -74,7 +74,7 @@ class ConditionalGetMiddleware:
         # ``Accept-Language`` header. Two clients sending ``en-US;q=0.9,en``
         # vs ``en`` both resolve to ``en`` — hashing the raw header would
         # spuriously miss the cache for what is the same language choice.
-        # Falls back to ``en`` when no header (mirrors :func:`_lang_from_accept_language`).
+        # Falls back to ``en`` when no header (mirrors `_lang_from_accept_language`).
         # Closes #71.
         preferred = parse_accept_language(accept_language)
         resolved_lang = preferred[0].lower() if preferred else "en"
