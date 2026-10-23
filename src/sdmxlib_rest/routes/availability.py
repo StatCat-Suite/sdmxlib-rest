@@ -506,23 +506,28 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
         raise HTTPException(status_code=400, detail=str(exc.args[0] if exc.args else exc)) from exc
 
     # componentID=all can compute every per-dimension DISTINCT plus the total
-    # COUNT as one aggregate in a single scan (`agg` + `sl.len()`, sdmxlib#414).
-    # Whether that beats the per-dimension loop depends entirely on whether a
-    # filter is applied, and the answer is the opposite in each case.
+    # COUNT as one aggregate in a single scan (`agg` + `sl.len()`, sdmxlib#414),
+    # and on DuckDB 2 that beats the per-dimension loop filtered or not.
     #
-    # Measured 2026-10-01 on a ~500M-row, 6-dimension census bundle,
-    # loop vs combined, best-of-2 (tests/bench/test_availability_sql.py):
+    # Unfiltered, measured on a ~500M-row, 6-dimension census bundle, warm,
+    # loop vs combined, best-of-2 (tests/bench/test_availability_sql.py, GH-36):
     #
-    #   no filter                     4.54 s vs 12.56 s   combined loses 2.8x
+    #   DuckDB 1.5.6, macOS           4.54 s vs 12.56 s   combined loses 2.8x
+    #   DuckDB 2.0.0, macOS                               combined wins  1.2-1.3x
+    #   DuckDB 2.0.0, Linux           3.22 s vs  2.72 s   combined wins  1.2x
+    #
+    # Filtered, every DISTINCT pays a scan of its own and one scan beats six;
+    # measured on DuckDB 1.5:
+    #
     #   c[SEX]=M        (1/3 of rows) 9.70 s vs  8.98 s   combined wins  1.1x
     #   c[GEO_LEVEL]=Country          0.08 s vs  0.02 s   combined wins  4.8x
     #   c[REF_AREA]=<one code>        0.11 s vs  0.04 s   combined wins  2.4x
     #
-    # Unfiltered, each DISTINCT is cheap and the combined form pays to
-    # materialise a large array; filtered, every DISTINCT pays a scan
-    # of its own and one scan beats six. So the combined form is taken only
-    # when a filter narrows it. sdmxlib measured the same split on the same
-    # bundle when it added `agg`, and offers it beside the loop for that reason.
+    # The unfiltered margin is thin and depends on row count: on a synthetic
+    # bundle with the same 580k-code geography and 20M rows the loop usually
+    # wins, by 1.2-2x, because building the per-dimension arrays outweighs the
+    # scans saved. Both take under half a second there.
+    # Re-measure on a large bundle before reverting.
     #
     # ``mode=available`` relaxes one constraint per per-dimension query, so each
     # aggregate would need its own WHERE and cannot share the combined scan —
@@ -531,7 +536,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     # componentID=<specific> stays on the single-query path: one DISTINCT is
     # not a loop to collapse.
     component_ids = [comp_id for comp_id, _ in components_to_query]
-    fast_path_eligible = componentID == "all" and mode == "exact" and not unfiltered
+    fast_path_eligible = componentID == "all" and mode == "exact"
     profile = componentID == "all"
     key_values: list[KeyValue] = []
     t0 = time.perf_counter()
