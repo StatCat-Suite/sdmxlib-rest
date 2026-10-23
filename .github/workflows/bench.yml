@@ -1,0 +1,47 @@
+# The bundle tier, on Linux, against a synthetic bundle (GH-37).
+#
+# Linux because the cold-cache tests evict the page cache with
+# `os.posix_fadvise`, which macOS lacks. On demand, and on PRs that touch the
+# bench, never on every push: it measures ratios, and a ratio that moves is a
+# finding to read (GH-36), so the job reports without blocking a merge.
+
+name: bench
+
+on:
+  workflow_dispatch:
+    inputs:
+      shape:
+        description: "Shape under tests/bench/shapes/"
+        default: large
+      seed:
+        description: "Seed for synthetic_bundle"
+        default: "1"
+  pull_request:
+    paths:
+      - "tests/bench/**"
+      - "tools/synthetic_bench.py"
+      - ".github/workflows/bench.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench-synthetic:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv sync --group dev
+      - run: uvx --from rust-just==1.46.0 just bench-synthetic "${SHAPE}" "${SEED}"
+        env:
+          SHAPE: ${{ inputs.shape || 'large' }}
+          SEED: ${{ inputs.seed || '1' }}

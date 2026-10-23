@@ -24,6 +24,7 @@ The first two are the evidence for issues #3 and #4 respectively.
 
 from __future__ import annotations
 
+import os
 import time
 from typing import TYPE_CHECKING
 
@@ -34,6 +35,13 @@ if TYPE_CHECKING:
     from tests.bench.conftest import Bundle
 
 pytestmark = pytest.mark.bundle
+
+#: `Bundle.evict_page_cache` needs `os.posix_fadvise`, which Linux has and macOS
+#: and Windows lack. Skipped there, because a warm measurement taken in place of
+#: a cold one answers a different question.
+_needs_eviction = pytest.mark.skipif(
+    not hasattr(os, "posix_fadvise"), reason="page-cache eviction needs os.posix_fadvise (Linux)"
+)
 
 #: Timing is best-of-N: the minimum is the least noisy estimator here, because
 #: interference only ever makes a run slower.
@@ -208,6 +216,7 @@ def _relaxed(constraints: dict[str, str], drop: str) -> tuple[str, list[str]]:
     return " AND ".join(f'"{k}" = ?' for k in kept), list(kept.values())
 
 
+@_needs_eviction
 def test_mode_available_does_not_want_a_single_scan_even_cold(bundle: Bundle) -> None:
     """#6: the per-dimension loop beats the one-scan form in both cache regimes.
 
@@ -285,6 +294,7 @@ def test_mode_available_does_not_want_a_single_scan_even_cold(bundle: Bundle) ->
     )
 
 
+@_needs_eviction
 def test_eviction_actually_cools_the_cache(bundle: Bundle) -> None:
     """The discrimination check for the test above.
 

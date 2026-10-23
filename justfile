@@ -106,6 +106,31 @@ coverage:
 bench bundle="":
     SDMXLIB_REST_BENCH_BUNDLE="{{bundle}}" uv run pytest -m bundle -s -v
 
+# A real bundle cannot leave the machine holding it, so the bundle tier also
+# runs against `sdmxlib.testing.synthetic_bundle` (GH-37). SHAPE is a file
+# under tests/bench/shapes/ or shapes/local/, or a .json path. `large` is
+# chosen by hand, not profiled: one 20k-code three-level hierarchy, four small
+# dimensions, 20M rows, built in about 20 s. The bundle is cached under
+# .bench/ by shape and seed.
+#
+# Build (or reuse) a synthetic bundle of SHAPE and run the bundle tier on it
+[group('test')]
+bench-synthetic shape="large" seed="1":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    name=$(basename "{{shape}}" .json)
+    out="$(pwd)/.bench/synthetic-${name}-{{seed}}"
+    uv run python tools/synthetic_bench.py build "{{shape}}" "${out}" --seed {{seed}}
+    just bench "${out}"
+
+# Its output is gitignored (tests/bench/shapes/local/): a real bundle's codelist
+# sizes and observation count identify it. Needs a bundle sdmxlib 0.72 can open.
+#
+# Write a real bundle's shape for `just bench-synthetic NAME`
+[group('test')]
+bench-profile bundle flow name:
+    uv run python tools/synthetic_bench.py profile "{{bundle}}" "{{flow}}" "{{name}}"
+
 [group('test')]
 ci: check test
 
