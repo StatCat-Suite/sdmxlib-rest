@@ -1,8 +1,8 @@
 # The bundle tier, on Linux, against a synthetic bundle (GH-37).
 #
-# The runner is a VM whose host caches its disk, so evicting the page cache
-# does not cool it and the cold-cache tests skip here; they need bare-metal
-# Linux. On demand, and on PRs that touch the bench, never on every push: it
+# The runner is a VM whose host may cache its disk, so evicting the page
+# cache sometimes leaves it warm; the cold-cache tests then skip, naming the
+# times measured. On demand, and on PRs that touch the bench, never on every push: it
 # measures ratios, and a ratio that moves is a finding to read (GH-36), so the
 # job reports without blocking a merge.
 

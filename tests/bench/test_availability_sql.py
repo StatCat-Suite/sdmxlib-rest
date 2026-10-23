@@ -227,10 +227,10 @@ def cold(bundle: Bundle) -> Bundle:
 
     `Bundle.evict_page_cache` needs `os.posix_fadvise`, which Linux has and macOS
     and Windows lack. On a VM, which includes GitHub's runners and Colima, the
-    host caches the guest's disk, so evicting the guest's cache leaves reads
-    warm (measured 1.28x on a runner). Either way a cold test would measure the
-    warm regime, which is the mistake it exists to prevent, so it skips with the
-    reason instead of failing.
+    host may cache the guest's disk, so evicting the guest's cache can leave
+    reads warm: one runner measured 1.28x, the next cooled. Either way a cold
+    test would measure the warm regime, which is the mistake it exists to
+    prevent, so it skips with the reason instead of failing.
     """
     if not hasattr(os, "posix_fadvise"):
         pytest.skip("page-cache eviction needs os.posix_fadvise (Linux)")
