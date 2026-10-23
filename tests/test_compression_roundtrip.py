@@ -9,8 +9,8 @@ over ``minimum_size`` raised ``AttributeError`` *after* the response had
 started, and the client saw a truncated body.
 
 Nothing caught it: the pre-existing suite only ever asserted on bodies under
-the compression threshold, where the responder short-circuits. The threshold is
-the whole point of these tests, so they assert on both sides of it.
+the compression threshold, where the responder short-circuits. These tests
+assert on both sides of the threshold.
 """
 
 from __future__ import annotations

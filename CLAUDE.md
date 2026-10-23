@@ -206,7 +206,7 @@ carrying a "Moved from GitLab #N" line.
 ## Common commands
 
 ```bash
-just check     # ruff (warnings fail too) + docstrings + Any ratchet + index guard + pyrefly
+just check     # ruff (warnings fail too) + docstrings + prose + Any ratchet + index guard + pyrefly
 just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop with
                #   `uv run python tools/count_any.py --write`
 just test      # unit tests
