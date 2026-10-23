@@ -1,16 +1,17 @@
 """Conditional GET (ETag / Last-Modified / 304) middleware.
 
-Our bundle is immutable per ``build_id`` — every (URL + query string +
+A publication of the bundle is immutable — every (URL + query string +
 Accept header) deterministically maps to one byte-stream until the
-bundle is re-published. That makes conditional GET trivial:
+bundle is re-published, which mints a new ``token``. That makes conditional
+GET trivial:
 
-- ETag is a hash of ``(build_id, path, query string, Accept)`` — different
-  bundles produce different ETags; different responses from the same
-  bundle do too (because path/query/Accept differ).
-- Last-Modified is the manifest's ``built_at`` HTTP-date.
+- ETag is a hash of ``(token, path, query string, Accept)`` — different
+  publications produce different ETags; different responses from the same
+  one do too (because path/query/Accept differ).
+- Last-Modified is the publication's timestamp (``runtime.last_modified``).
 
 When a client sends ``If-None-Match`` matching the ETag, or
-``If-Modified-Since`` >= ``built_at``, we return ``304 Not Modified``
+``If-Modified-Since`` >= that timestamp, we return ``304 Not Modified``
 with no body. Otherwise the response carries ``ETag``, ``Last-Modified``,
 and ``Vary: Accept`` so caches behave correctly.
 """
@@ -33,12 +34,11 @@ if TYPE_CHECKING:
 class ConditionalGetMiddleware:
     """ASGI middleware adding ETag / Last-Modified + handling If-None-Match / If-Modified-Since.
 
-    Reads build identity (``build_id`` / ``built_at``) off the injected
-    :class:`CatalogRuntime` — an empty ``build_id`` means the catalog isn't
-    open yet, so the middleware passes through untouched. ``version`` is the
-    consumer app's version string: it busts every ETag on release so a
-    response-shape change ships new ETags even though the immutable bundle's
-    ``build_id`` is stable across code deploys.
+    Reads the publication's ``token`` and ``last_modified`` off the injected
+    :class:`CatalogRuntime`; before the catalog is open the middleware passes
+    through untouched. ``version`` is the consumer app's version string: it
+    busts every ETag on release so a response-shape change ships new ETags
+    even though the bundle's ``token`` is stable across code deploys.
     """
 
     def __init__(self, app: ASGIApp, *, runtime: CatalogRuntime, cache_control: str = "", version: str = "") -> None:
@@ -61,11 +61,11 @@ class ConditionalGetMiddleware:
 
         if not self.runtime.is_open:
             # Catalog not open yet — nothing stable to fingerprint. (Guard on
-            # is_open, not build_id: an opened-but-empty build_id still gets a
+            # is_open, not token: an opened-but-empty token still gets a
             # deterministic ETag, matching the old ``manifest is None`` check.)
             await self.app(scope, receive, send)
             return
-        build_id = self.runtime.build_id
+        token = self.runtime.token
 
         headers: dict[bytes, str] = {k.lower(): v.decode("latin-1") for k, v in scope["headers"]}
         accept = headers.get(b"accept", "")
@@ -82,15 +82,13 @@ class ConditionalGetMiddleware:
         # `__version__` busts caches on every release. Without it, server-side
         # response shape changes (e.g. JSON post-processing in the v1 forwarders
         # injecting `obs_count` / `DEFAULT` annotations) ride on the old ETag
-        # because the bundle's build_id is stable across code deploys —
+        # because the bundle's token is stable across code deploys —
         # clients keep getting 304 with their pre-change cached body.
-        signature = (
-            f"{self.version}|{build_id}|{scope['path']}|{scope['query_string'].decode()}|{accept}|{resolved_lang}"
-        )
+        signature = f"{self.version}|{token}|{scope['path']}|{scope['query_string'].decode()}|{accept}|{resolved_lang}"
         etag_value = hashlib.sha256(signature.encode("utf-8")).hexdigest()[:16]
         etag = f'"{etag_value}"'
 
-        last_modified_dt = _parse_built_at(self.runtime.built_at)
+        last_modified_dt = _parse_built_at(self.runtime.last_modified)
         last_modified = format_datetime(last_modified_dt, usegmt=True) if last_modified_dt else None
 
         if_none_match = headers.get(b"if-none-match")

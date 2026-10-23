@@ -39,13 +39,13 @@ class MessageAnnotator(Protocol):
         *,
         registry: sl.LocalRegistry,
         conn: duckdb.DuckDBPyConnection,
-        build_id: str,
+        token: str,
     ) -> StructureMessage:
         """Return ``message`` (or a copy) with the consumer's annotations applied.
 
         ``registry`` + ``conn`` let the annotator derive whatever it needs from
-        the bundle; ``build_id`` identifies the (immutable) bundle so the
-        annotator can memoise per-build derivations.
+        the bundle; ``token`` changes at every publication of the bundle, so
+        the annotator can memoise derivations per publication.
         """
         ...
 
@@ -59,7 +59,7 @@ class NullMessageAnnotator:
         *,
         registry: sl.LocalRegistry,  # noqa: ARG002
         conn: duckdb.DuckDBPyConnection,  # noqa: ARG002
-        build_id: str,  # noqa: ARG002
+        token: str,  # noqa: ARG002
     ) -> StructureMessage:
         """Return the message unchanged."""
         return message

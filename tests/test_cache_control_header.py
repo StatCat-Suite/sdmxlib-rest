@@ -35,10 +35,11 @@ class _FakeProvider:
 
     def open(self) -> OpenedCatalog:
         return OpenedCatalog(
-            registry=None,  # type: ignore[arg-type] — middleware only reads build_id/built_at
+            registry=None,  # type: ignore[arg-type] — a set token means the registry's manifest is never read
             meta_conn=None,  # type: ignore[arg-type]
             build_id="testbuild",
             built_at="2026-06-16T00:00:00+00:00",
+            token="testbuild",  # noqa: S106 — a cache key, not a credential
         )
 
 
@@ -65,7 +66,7 @@ def _app(cache_control: str) -> FastAPI:
     def missing() -> PlainTextResponse:
         return PlainTextResponse("no such artefact", status_code=404)
 
-    # Inject a pre-opened runtime so the middleware's build_id is non-empty and
+    # Inject a pre-opened runtime so the middleware's token is non-empty and
     # the wrapped_send / ETag path actually runs (no real bundle needed).
     app.add_middleware(ConditionalGetMiddleware, runtime=_open_runtime(), cache_control=cache_control, version="test")
     return app

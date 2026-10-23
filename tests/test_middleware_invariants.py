@@ -15,7 +15,7 @@ only true if the rewrite lands before the ETag layer reads the header.
 **One correction this file encodes.** `_install_middleware`'s docstring said the
 ETag "hashes the *uncompressed* body", so moving it outward would make ETags vary
 with compression. It does not hash the body at all — the signature is
-`version|build_id|path|query|accept|resolved_lang`, computed before the app runs.
+`version|token|path|query|accept|resolved_lang`, computed before the app runs.
 The invariant (an ETag that does not move when compression changes) holds; it
 holds by construction rather than by ordering, and the docstring now says so.
 """

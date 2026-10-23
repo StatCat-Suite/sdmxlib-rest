@@ -274,7 +274,7 @@ def _install_middleware(
       this docstring gave until #1 measured it. The claim was that the ETag
       "hashes the uncompressed body", so moving it outward would make ETags vary
       with compression. It does not hash the body at all: the signature is
-      ``version|build_id|path|query|accept|resolved_lang``, computed before the
+      ``version|token|path|query|accept|resolved_lang``, computed before the
       app runs. So the ETag is compression-independent by construction, and no
       behavioural test fails when it moves outward *except* via the
       LangOverride relation above. If you need to move it, that is the only

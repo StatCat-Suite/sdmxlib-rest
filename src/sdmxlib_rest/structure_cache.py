@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 class StructureQuery:
     """The resolved structure request a cache keys on.
 
-    ``version`` is post-``latest``-resolution and ``build_id`` pins the cache to
-    the immutable bundle build, so a re-publish invalidates every slot.
+    ``version`` is post-``latest``-resolution and ``token`` pins the cache to
+    one publication of the bundle, so a re-publish invalidates every slot.
     """
 
     structure_type: str
@@ -39,7 +39,7 @@ class StructureQuery:
     references: str
     accept: str | None
     accept_language: str | None
-    build_id: str
+    token: str
 
 
 @runtime_checkable

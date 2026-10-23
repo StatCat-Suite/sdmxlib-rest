@@ -132,7 +132,7 @@ def test_one_key_serves_every_client_spelling(world: World) -> None:
             assert resp.status_code == 200, (spelling, resp.text)
 
     assert len(values.lookups) == len(spellings)
-    assert set(values.lookups) == {AvailabilityKey(build_id=BUILD_ID, flow_urn=FLOW, component_id="all")}
+    assert set(values.lookups) == {AvailabilityKey(token=BUILD_ID, flow_urn=FLOW, component_id="all")}
 
 
 def test_the_key_is_per_component(world: World) -> None:
@@ -171,7 +171,7 @@ def test_a_miss_offers_the_scanned_values_back(world: World) -> None:
 
     assert len(values.stores) == 1
     key, resolved = values.stores[0]
-    assert key == AvailabilityKey(build_id=BUILD_ID, flow_urn=FLOW, component_id="all")
+    assert key == AvailabilityKey(token=BUILD_ID, flow_urn=FLOW, component_id="all")
     assert resolved.obs_count == 3
     scanned = {kv.dimension_id: sorted(v.value for v in kv.values) for kv in resolved.key_values}
     assert scanned == {"REF_AREA": ["CA", "US"], "SEX": ["F", "M"], "TIME_PERIOD": ["2020", "2021"]}

@@ -57,8 +57,8 @@ class AvailabilityKey:
     filename with ``Dataflow.urn_for(...)`` and get a matching key.
 
     Attributes:
-        build_id: Pins the entry to one immutable bundle build, so a re-publish
-            invalidates every slot without any bookkeeping.
+        token: Pins the entry to one publication of the bundle, so a
+            re-publish invalidates every slot without any bookkeeping.
         flow_urn: The resolved dataflow. Keying on the flow rather than the
             request path is what makes the 1.5 and 2.2.2 surfaces share an entry,
             and what makes a forwarder's path shape unable to collide two flows.
@@ -67,7 +67,7 @@ class AvailabilityKey:
             attribute.
     """
 
-    build_id: str
+    token: str
     flow_urn: sl.SdmxUrn[Dataflow]
     component_id: str
 

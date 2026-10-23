@@ -47,10 +47,10 @@ from sdmxlib_rest.responses.availability import JSON_MEDIA as _JSON_MEDIA
 from sdmxlib_rest.responses.availability import render_availability
 from sdmxlib_rest.runtime import (
     get_availability_values,
-    get_build_id,
     get_filter_shaper,
     get_meta_conn,
     get_registry,
+    get_token,
 )
 
 # componentID accepts the literal ``all`` plus the SDMX-REST 2.2.2 wildcard
@@ -262,7 +262,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     request: Request,
     registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
-    build_id: Annotated[str, Depends(get_build_id)],
+    token: Annotated[str, Depends(get_token)],
     availability_values: Annotated[AvailabilityValues, Depends(get_availability_values)],
     filter_shaper: Annotated[ComponentFilterShaper, Depends(get_filter_shaper)],
     context: Annotated[
@@ -485,7 +485,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     # all. Judged on the filter the shaper produced, not on the URL — a shaper
     # may add a constraint the request never named, and an unfiltered answer
     # would then be wrong for it. See `availability_values` for the full case.
-    values_key = AvailabilityKey(build_id=build_id, flow_urn=flow_urn, component_id=componentID)
+    values_key = AvailabilityKey(token=token, flow_urn=flow_urn, component_id=componentID)
     unfiltered = not (_constrains(component_filter) or non_eq_filters or has_bounds)
     if unfiltered and (resolved := availability_values.lookup(values_key)) is not None:
         return render_availability(
