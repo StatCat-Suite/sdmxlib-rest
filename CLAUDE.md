@@ -192,7 +192,7 @@ stating it.
 
 Issues live on GitHub (StatCat-Suite/sdmxlib-rest). The project moved from
 GitLab in October 2026, and the tree cites the GitLab tracker as a bare `#N` —
-`#6`, `#35`. Those still mean GitLab (gitlab.com/pinax-suite/sdmxlib-rest, an
+`#6`, `#7`. Those still mean GitLab (gitlab.com/pinax-suite/sdmxlib-rest, an
 archive now) and stay as written; `sdmxlib#N` likewise means sdmxlib's GitLab
 tracker.
 
