@@ -8,7 +8,7 @@ filter these out by walking the spec for the marker.
 
 Applied as a post-processor on the FastAPI app's ``openapi()`` cache so
 the published ``/openapi.json`` and ``/v1/openapi.json`` carry the
-markers. See :func:`apply_vendor_markers`.
+markers. See `apply_vendor_markers`.
 
 Closes #37.
 """
@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Any, Final, cast
 
 # Vendor query parameters across all routes. The shared
-# :func:`apply_vendor_markers` walks every operation and tags any
+# `apply_vendor_markers` walks every operation and tags any
 # parameter whose name is in this set as ``x-vendor: true``.
 _VENDOR_PARAM_NAMES: Final[frozenset[str]] = frozenset(
     {

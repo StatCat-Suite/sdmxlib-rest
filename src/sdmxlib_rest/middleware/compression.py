@@ -2,8 +2,8 @@
 
 Two behaviours stacked into one ASGI component:
 
-1. **isa-l gzip backend.** :class:`IsalGZipMiddleware` is a drop-in for
-   Starlette's :class:`starlette.middleware.gzip.GZipMiddleware` that
+1. **isa-l gzip backend.** `IsalGZipMiddleware` is a drop-in for
+   Starlette's `starlette.middleware.gzip.GZipMiddleware` that
    swaps stdlib ``zlib`` for isa-l's ``compressobj``. Wire
    format is unchanged (clients still see ``Content-Encoding: gzip``)
    but the deflate step is 3-5x faster at low levels. Diagnostic on the
@@ -11,9 +11,9 @@ Two behaviours stacked into one ASGI component:
    request time; isa-l makes it nearly free, lifting the next bottleneck
    (CSV serialization in sdmxlib) into view.
 
-2. **Skip-list for already-compressed bodies.** :class:`SelectiveGZipMiddleware`
+2. **Skip-list for already-compressed bodies.** `SelectiveGZipMiddleware`
    wraps the isa-l middleware and tags responses whose ``Content-Type``
-   is in :data:`SKIP_GZIP_CONTENT_TYPES` (parquet, octet-stream, zstd)
+   is in `SKIP_GZIP_CONTENT_TYPES` (parquet, octet-stream, zstd)
    with ``Content-Encoding: identity`` *before* the gzip layer sees
    them. The gzip middleware short-circuits on ``content-encoding in
    headers``, so the tagged responses go through untouched.
@@ -32,9 +32,9 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 def install_isal_zip_backend() -> None:
-    """Make :mod:`zipfile` (and via re-export, :mod:`zipstream-ng`) use isa-l for DEFLATE.
+    """Make `zipfile` (and via re-export, `zipstream-ng`) use isa-l for DEFLATE.
 
-    zipstream-ng imports ``_get_compressor`` from stdlib :mod:`zipfile`,
+    zipstream-ng imports ``_get_compressor`` from stdlib `zipfile`,
     which in turn calls ``zlib.compressobj(...)``. We replace that with a
     drop-in that returns an isa-l compressor: same API, raw-deflate wire
     output (stdlib ``zlib.decompressobj(-15)`` reads it back), ~2-3x
@@ -79,7 +79,7 @@ SKIP_GZIP_CONTENT_TYPES: frozenset[str] = frozenset(
 
 
 class _IsalGZipResponder(GZipResponder):
-    """:class:`GZipResponder` that compresses with isa-l instead of zlib.
+    """`GZipResponder` that compresses with isa-l instead of zlib.
 
     Starlette's responder funnels every body chunk through
     ``self.compressor``. isa-l exposes the same ``compress``/``flush`` API
@@ -139,7 +139,7 @@ class IsalGZipMiddleware:
 
 
 class SelectiveGZipMiddleware:
-    """GZip middleware (isa-l backend) that skips :data:`SKIP_GZIP_CONTENT_TYPES`."""
+    """GZip middleware (isa-l backend) that skips `SKIP_GZIP_CONTENT_TYPES`."""
 
     def __init__(self, app: ASGIApp, *, minimum_size: int = 1024, compresslevel: int = 1) -> None:
         self._gzip = IsalGZipMiddleware(_TagSkippableApp(app), minimum_size=minimum_size, compresslevel=compresslevel)
@@ -151,7 +151,7 @@ class SelectiveGZipMiddleware:
 class _TagSkippableApp:
     """Inner ASGI wrapper marking skip-list responses with ``Content-Encoding: identity``.
 
-    The outer :class:`GZipMiddleware` already short-circuits when any
+    The outer `GZipMiddleware` already short-circuits when any
     ``content-encoding`` header is present on the response; we exploit
     that to opt parquet (and similar) responses out of compression.
     """

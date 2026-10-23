@@ -7,10 +7,10 @@ stored (a consumer's bundle keeps it in its own DuckDB tables); it only needs
 the set URNs back, which it then materialises through the catalog like any
 other artefact.
 
-A consumer implements :class:`MetadataStore`; the default
-:class:`NullMetadataStore` returns nothing, so a catalogue without a metadata
+A consumer implements `MetadataStore`; the default
+`NullMetadataStore` returns nothing, so a catalogue without a metadata
 linkage simply reports no attached sets. The store is carried on the
-:class:`~sdmxlib_rest.runtime.CatalogRuntime`.
+`CatalogRuntime`.
 """
 
 from __future__ import annotations

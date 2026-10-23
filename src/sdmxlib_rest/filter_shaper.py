@@ -1,6 +1,6 @@
 """The component-filter shaper seam.
 
-Between "parse the request into a :class:`~sdmxlib.ComponentFilter`" and "turn
+Between "parse the request into a `ComponentFilter`" and "turn
 that filter into WHERE clauses" there is a gap where catalogs legitimately want
 to intervene, for two different reasons:
 
@@ -18,7 +18,7 @@ partitions.
 Neither belongs in a generic library: the first is a vendor extension, the
 second is knowledge of a specific lake layout. But both have to happen at the
 same point in every route that builds a filter, so the library defines the hook
-and the catalog fills it. The default :class:`NullComponentFilterShaper` returns
+and the catalog fills it. The default `NullComponentFilterShaper` returns
 the filter untouched, so a catalog that models neither pays nothing.
 
 The shaper receives the raw query items rather than pre-parsed values, because

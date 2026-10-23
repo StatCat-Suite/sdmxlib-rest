@@ -54,7 +54,7 @@ def _parse_media(media: str) -> tuple[str, str | None]:
 
     The base is the ``application/...`` portion (lower-cased, stripped of
     matrix params). The version is the value of ``;version=X.Y[.Z]`` after
-    :func:`_normalize_version`, or ``None`` if the token is unversioned.
+    `_normalize_version`, or ``None`` if the token is unversioned.
     Non-version matrix params (``;urn=true``, ``;charset=utf-8``) are
     ignored — they don't change format identity.
     """
@@ -104,7 +104,7 @@ def ensure_acceptable(accept: str | None, supported: list[str]) -> None:
     - The header contains a media type whose ``(base, normalized version)``
       equals one of the ``supported`` entries. SDMX two-part / three-part
       version tokens are equivalent (``version=2.0`` ≡ ``version=2.0.0``)
-      via :func:`_normalize_version`; an unversioned client token matches
+      via `_normalize_version`; an unversioned client token matches
       any supported version per SDMX-REST 2.2.2 §6.1.
     - The header contains one of the format-shorthand tokens
       ``xml`` / ``json`` / ``csv`` / ``parquet`` AND the request does NOT

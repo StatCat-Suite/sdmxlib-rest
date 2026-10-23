@@ -111,4 +111,7 @@ dev = [
     # a rule, and without a cap it lands in CI unannounced — 1.4 did exactly
     # that with `unknown-attribute-access`. Raise it deliberately, on its own.
     "pyrefly>=1.4.0,<1.5",
+    # `just check-docstrings` reads only its DOC003 (style mismatch). Capped for
+    # the same reason as the checkers above.
+    "pydoclint>=0.11.1,<0.12",
 ]

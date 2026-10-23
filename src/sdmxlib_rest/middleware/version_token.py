@@ -14,7 +14,7 @@ The middleware does one transform on the way out: any
 Other matrix params (``;urn=true``, ``;charset=utf-8``) survive untouched
 since we only touch the ``version=`` segment.
 
-Symmetric to the input-side normalisation in :mod:`negotiation`: that
+Symmetric to the input-side normalisation in `negotiation`: that
 matcher already treats ``version=X.Y`` ≡ ``version=X.Y.0``, so any client
 matching on three-part still works against our two-part response.
 """

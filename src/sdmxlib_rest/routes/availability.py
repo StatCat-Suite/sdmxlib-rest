@@ -6,7 +6,7 @@ under those constraints. Powers next-step picker UIs — "the user picked a
 region, now show only the topics that have data for it".
 
 The response is a SDMX StructureMessage carrying a single
-:class:`~sdmxlib.DataConstraint` with one ``CubeRegion`` whose
+`DataConstraint` with one ``CubeRegion`` whose
 ``KeyValue`` lists the available codes for ``componentID``.
 """
 
@@ -65,7 +65,7 @@ def _strip_dim_from_key(key: str, drop_dim_id: str, dsd_key_dims: list[str]) -> 
     ``key='all'`` is the universal wildcard — no stripping needed. Otherwise
     we split on ``.`` and replace the segment positioned at the dim's index
     in the DSD's dimension order with an empty string (which sdmxlib's
-    :func:`parse_components` treats as the wildcard for that position).
+    `parse_components` treats as the wildcard for that position).
     """
     if key == "all":
         return "all"

@@ -5,12 +5,12 @@ from a consumer-owned cache, skipping materialise + serialise + splice. The
 library does not know *which* responses are worth caching (that is a
 catalog-shaped speedup decision — e.g. a consumer may cache its largest
 codelists and hierarchies) nor *where* the bytes live; it
-only knows to ask the injected :class:`StructureCache` before doing work and to
+only knows to ask the injected `StructureCache` before doing work and to
 offer the finished response back for storage.
 
-A consumer implements :class:`StructureCache`; the default
-:class:`NullStructureCache` caches nothing, so a bare catalog just always does
-the work. The cache is carried on the :class:`~sdmxlib_rest.runtime.CatalogRuntime`.
+A consumer implements `StructureCache`; the default
+`NullStructureCache` caches nothing, so a bare catalog just always does
+the work. The cache is carried on the `CatalogRuntime`.
 """
 
 from __future__ import annotations

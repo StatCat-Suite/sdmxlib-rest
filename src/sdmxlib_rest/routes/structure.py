@@ -46,7 +46,7 @@ router = APIRouter(tags=["structure"])
 # Two wildcard tokens are accepted: ``all`` (SDMX-REST 1.5 legacy that .Stat /
 # DLM emit; e.g. ``/structure/dataflow/all/all/all`` lists every dataflow)
 # and ``*`` (the canonical 2.2.2 form). Both normalise to the same internal
-# sentinel (``_WILDCARD``) at handler entry via :func:`_normalize_wildcard`,
+# sentinel (``_WILDCARD``) at handler entry via `_normalize_wildcard`,
 # so downstream dispatch only ever sees ``"all"``.
 _AGENCY_PATTERN = r"^(all|\*|[A-Za-z0-9_@$-]+(\.[A-Za-z0-9_@$-]+)*)$"
 _ID_PATTERN = r"^(all|\*|[A-Za-z0-9_@$-]+)$"
@@ -1140,7 +1140,7 @@ def _resolve_latest(
     """Return the highest version of ``cls`` for the concrete (agency, id), or None.
 
     Used when the caller specifies `version=latest` against a single artefact
-    (no wildcards in agency / id). Sorts by :func:`_version_key`, so `"2.10"`
+    (no wildcards in agency / id). Sorts by `_version_key`, so `"2.10"`
     correctly outranks `"2.9"`.
     """
     versions: list[str] = []

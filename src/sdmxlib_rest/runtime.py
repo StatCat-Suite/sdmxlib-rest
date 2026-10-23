@@ -1,16 +1,16 @@
 """Per-app registry runtime + FastAPI dependencies.
 
-Rather than a module-global cache of the opened registry, a :class:`CatalogRuntime`
-holds one lazily-opened :class:`~sdmxlib_rest.provider.OpenedCatalog` and
+Rather than a module-global cache of the opened registry, a `CatalogRuntime`
+holds one lazily-opened `OpenedCatalog` and
 is stored on ``app.state.rest_runtime``. Sub-apps mounted under a parent
 (e.g. a consumer's forwarder surfaces) share the parent's runtime via
-:func:`share_runtime`, so one registry open serves every surface — and two
+`share_runtime`, so one registry open serves every surface — and two
 independent registries can coexist in one process, each on its own app.
 
-The request-scoped dependencies (:func:`get_runtime`, :func:`get_registry`,
-:func:`get_meta_conn`) read ``request.app.state.rest_runtime``. Consumers
+The request-scoped dependencies (`get_runtime`, `get_registry`,
+`get_meta_conn`) read ``request.app.state.rest_runtime``. Consumers
 that need the runtime outside a request (lifespan warmers, ASGI
-middleware) hold the :class:`CatalogRuntime` instance directly.
+middleware) hold the `CatalogRuntime` instance directly.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class CatalogRuntime:
     (or accept that two concurrent cold requests may both open, last wins),
     matching the previous ``_state``-dict semantics.
 
-    ``splices`` is the canonical-surface :class:`SpliceRegistry` the structure
+    ``splices`` is the canonical-surface `SpliceRegistry` the structure
     route runs on its serialised JSON (default: empty → the runner still
     applies its built-in URN injection). The consumer installs its registry
     here; it is uniform across the parent app and its shared mounts (a
@@ -74,7 +74,7 @@ class CatalogRuntime:
 
     @property
     def is_open(self) -> bool:
-        """True once :meth:`ensure_open` has run and the registry is live."""
+        """True once `ensure_open` has run and the registry is live."""
         return self._opened is not None
 
     @property
@@ -155,7 +155,7 @@ def share_runtime(parent_app: Starlette, sub_app: Starlette) -> None:
 
 
 def get_runtime(request: Request) -> CatalogRuntime:
-    """FastAPI dependency: the :class:`CatalogRuntime` on this request's app."""
+    """FastAPI dependency: the `CatalogRuntime` on this request's app."""
     runtime = request.app.state.rest_runtime
     assert isinstance(runtime, CatalogRuntime)  # noqa: S101
     return runtime
@@ -172,7 +172,7 @@ def get_meta_conn(request: Request) -> duckdb.DuckDBPyConnection:
 
 
 def get_splices(request: Request) -> SpliceRegistry:
-    """FastAPI dependency: the canonical structure :class:`SpliceRegistry` for this app."""
+    """FastAPI dependency: the canonical structure `SpliceRegistry` for this app."""
     return get_runtime(request).splices
 
 

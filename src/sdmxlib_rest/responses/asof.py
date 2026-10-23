@@ -9,7 +9,7 @@ query param).
 
 This service runs from a single immutable bundle per process, identified
 by ``build_id``. There's no history layer — point-in-time queries
-aren't meaningful. Calling :func:`reject_asof` from each route surfaces
+aren't meaningful. Calling `reject_asof` from each route surfaces
 the right HTTP status to a strict client and registers the param in
 the OpenAPI schema so it's discoverable.
 """
