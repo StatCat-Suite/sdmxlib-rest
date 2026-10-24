@@ -1,9 +1,12 @@
 # Changelog
 
-All notable changes to this project are documented here.
+All notable changes to this project are documented here. git-cliff drafts each
+release's entry from the commit log, grouped under its own names (Breaking
+Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
+0.1.0 to 0.7.0 use Keep a Changelog's names (Breaking, Added, Changed, Fixed).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
+before 1.0, a minor release may break.
 
 ## [0.8.0] - 2026-10-23
 
