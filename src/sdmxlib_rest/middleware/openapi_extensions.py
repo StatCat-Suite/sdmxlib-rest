@@ -28,7 +28,7 @@ _VENDOR_PARAM_NAMES: Final[frozenset[str]] = frozenset(
         # /metadata listing cap
         "limit",
         # HTTP header — declared via fastapi.Header(alias="Range"); appears as
-        # a parameter in OpenAPI even though it's a request header, not a query.
+        # a parameter in OpenAPI although it is a request header.
         "Range",
     },
 )
@@ -72,11 +72,10 @@ def _tag_vendor_operation(op: dict[str, Any]) -> None:
 def apply_vendor_markers(spec: dict[str, Any]) -> dict[str, Any]:
     """Mutate an OpenAPI document in place, adding ``x-vendor: true`` to vendor params + ops.
 
-    Vendor paths get the marker stamped on every operation under them
-    (rather than at the path-item level) — Swagger UI 5.x renders a
-    ``x-vendor`` sibling of ``get`` / ``post`` as a phantom "invalid"
-    operation at the bottom of the docs page. Per-operation extensions
-    are well-known territory and render cleanly.
+    Vendor paths get the marker stamped on every operation under them.
+    Swagger UI 5.x renders a path-level ``x-vendor`` sibling of ``get`` /
+    ``post`` as a phantom "invalid" operation at the bottom of the docs page.
+    Per-operation extensions are well-known territory and render cleanly.
 
     Idempotent — re-running on an already-marked spec doesn't double-write.
     Returns the same dict for caller convenience.

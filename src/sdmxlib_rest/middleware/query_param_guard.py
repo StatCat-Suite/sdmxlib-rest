@@ -38,8 +38,8 @@ from fastapi import HTTPException, Request
 _BRACKETED_PREFIXES: Final[tuple[str, ...]] = ("c[", "within[")
 
 # Cross-route vendor query params declared in our OpenAPI but not in
-# the FastAPI route signature (because they're documented via the
-# vendor extensions hook, not as Python kwargs).
+# the FastAPI route signature (the vendor extensions hook documents
+# them).
 _GLOBAL_VENDOR_PARAMS: Final[frozenset[str]] = frozenset(
     {
         # Internal-only benchmarking knob — accepted but ``include_in_schema=False``.
@@ -52,9 +52,9 @@ _GLOBAL_VENDOR_PARAMS: Final[frozenset[str]] = frozenset(
 # DLM, for instance, attach ``dimensionAtObservation=AllDimensions`` to
 # every request including structure + availability fetches; ``format``
 # similarly stands in for ``Accept`` on some legacy clients. We accept
-# them as global no-ops rather than 400 (the guard exists to catch
-# *typos* like ``detial`` — a known spec keyword on the
-# "wrong" endpoint is a permissible client habit, not a bug).
+# them as global no-ops. The guard exists to catch *typos* like
+# ``detial``; a known spec keyword sent to the "wrong" endpoint is a
+# permissible client habit.
 #
 # Handler-level declaration still wins where the param has actual
 # semantics (e.g. ``format`` on ``/data``, where we validate the value);

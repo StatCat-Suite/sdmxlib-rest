@@ -58,7 +58,7 @@ class ComponentFilterShaper(Protocol):
     """Consumer hook to rewrite a parsed component filter before SQL generation.
 
     Implementations must be pure with respect to the request: return a new
-    filter rather than mutating the input, and raise ``ValueError`` /
+    filter and leave the input unchanged, and raise ``ValueError`` /
     ``KeyError`` for a malformed vendor parameter so the route can turn it into
     a 400 alongside the standard key-parse errors.
     """

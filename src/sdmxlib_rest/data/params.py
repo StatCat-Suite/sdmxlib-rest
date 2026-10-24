@@ -37,7 +37,7 @@ KEEP_ALL_MEASURE_KEYWORDS = frozenset({"all"})
 
 # `attributes=msd` selects observations attached to referential metadata via a
 # MetadataStructure. Consumers whose bundle carries no MSD attachments can
-# short-circuit to a header-only CSV rather than scanning every observation.
+# short-circuit to a header-only CSV and skip the observation scan.
 DROP_ALL_ATTRIBUTE_KEYWORDS = frozenset({"msd"})
 
 # Operators defined by the SDMX-REST 2.2.2 `c[...]=` syntax. Each `+`-joined
@@ -260,8 +260,8 @@ def reject_unsupported_standard_params(
     """Return 501 if the caller asked for a SDMX-REST 2.2.2 param this server won't implement.
 
     Consumers backed by a single static bundle have no version history and no
-    fiscal-period semantics, so these three are permanently unimplementable
-    rather than merely unbuilt.
+    fiscal-period semantics, so these three can never be implemented for
+    them.
     """
     unsupported = [
         name

@@ -118,9 +118,8 @@ def encode_parquet(batches: Iterable[pa.RecordBatch]) -> Iterator[bytes]:
     advertised. Each yielded chunk is whatever the ``ParquetWriter`` flushed
     since the previous yield; the final yield carries the closing footer.
 
-    Memory is bounded by row-group size (one ``RecordBatch``), not by total
-    result size, and TTFB is the first batch's scan + encode rather than the
-    whole query.
+    Memory is bounded by row-group size (one ``RecordBatch``), and TTFB is
+    the first batch's scan + encode.
 
     ``write_statistics`` and ``use_dictionary`` are off deliberately:
     SDMX-CSV-shaped data is string-heavy with high repetition, zstd compresses

@@ -58,9 +58,9 @@ class AvailabilityKey:
     Attributes:
         token: Pins the entry to one publication of the bundle, so a
             re-publish invalidates every slot without any bookkeeping.
-        flow_urn: The resolved dataflow. Keying on the flow rather than the
-            request path is what makes the 1.5 and 2.2.2 surfaces share an entry,
-            and what makes a forwarder's path shape unable to collide two flows.
+        flow_urn: The resolved dataflow. Keying on the flow lets the 1.5 and
+            2.2.2 surfaces share an entry, and keeps a forwarder's path shape
+            from colliding two flows.
         component_id: ``all`` or one component id, verbatim from the path.
             ``all`` is every key dimension; a specific id may also name an
             attribute.
@@ -92,10 +92,10 @@ class AvailabilityValues(Protocol):
     """Consumer-owned source of precomputed availability values.
 
     ``lookup`` is asked before scanning and returns the values, or ``None`` to
-    fall through to the scan — so a partial bake is a normal state rather than a
-    gap. ``store`` is offered the scanned values afterwards, which lets a consumer
-    with no producer-side bake still pay the scan once per build instead of once
-    per request. Both are called only for unfiltered requests.
+    fall through to the scan, so a partial bake is a normal state. ``store`` is
+    offered the scanned values afterwards, which lets a consumer with no
+    producer-side bake still pay the scan once per build instead of once per
+    request. Both are called only for unfiltered requests.
     """
 
     def lookup(self, key: AvailabilityKey) -> ResolvedAvailability | None:

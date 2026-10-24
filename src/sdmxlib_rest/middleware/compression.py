@@ -46,7 +46,7 @@ def install_isal_zip_backend() -> None:
         return
     original = zipfile._get_compressor  # pyrefly: ignore[missing-attribute]
 
-    # `Any` is the honest return type, not a shrug: the DEFLATED branch yields
+    # The return type is `Any` because the DEFLATED branch yields
     # an `isal_zlib.Compress` (a C extension type with no stub), and the
     # fallback returns whatever the untyped stdlib hook returns for bz2/lzma.
     # No narrower annotation is true of both.
@@ -96,7 +96,7 @@ class _IsalGZipResponder(GZipResponder):
     constructor means a future field lands here for free.
     """
 
-    # isa-l's levels are 0-3; zlib's are 0-9. Clamp rather than hand isa-l
+    # isa-l's levels are 0-3; zlib's are 0-9. Clamp so isa-l never receives
     # a level it rejects — level 1 keeps its "fast" meaning either way.
     _MAX_ISAL_LEVEL = 3
 

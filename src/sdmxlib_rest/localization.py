@@ -148,7 +148,8 @@ def localize_sdmx_json(body: bytes, accept_language: str | None) -> tuple[bytes,
 # Field pairs: (singular field, plural-multilingual field).
 _LOCALISABLE_FIELDS = (("name", "names"), ("description", "descriptions"))
 
-# A parsed JSON body, so the walk below narrows to real types rather than `Any`.
+# A parsed JSON body (`json.loads` returns `Any`), typed so the walk below
+# narrows to real types.
 type _Json = dict[str, _Json] | list[_Json] | str | int | float | bool | None
 
 

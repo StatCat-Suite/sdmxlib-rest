@@ -17,7 +17,7 @@ from fastapi import HTTPException
 
 
 def is_browser_request(accept: str | None) -> bool:
-    """True when the Accept header looks like a browser's, not a strict SDMX client.
+    """True when the Accept header looks like a browser's default.
 
     Browsers default to something like
     ``text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`` —

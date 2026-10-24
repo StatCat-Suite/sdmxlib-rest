@@ -30,7 +30,7 @@ AsOf = Annotated[
             "SDMX-REST 2.2.2 — time-travel query. Not implemented: this service runs from a "
             "single immutable bundle (`build_id`) per process and has no history layer, so any "
             "non-null `asOf` returns `501`. The parameter is declared so clients can "
-            "discover the gap via OpenAPI rather than guessing at our behaviour."
+            "learn from OpenAPI that time-travel queries are unsupported."
         ),
     ),
 ]

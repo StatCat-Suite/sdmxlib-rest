@@ -47,7 +47,7 @@ _DATA_COLLECTION_KEYS: Final[frozenset[str]] = frozenset(
         "metadataflows",
         "metadataStructures",
         # Constraint collections — emptiness for these is determined by their
-        # cube-region keyValues, not by their presence; treat them as "non-empty"
+        # cube-region keyValues; treat them as "non-empty"
         # collections and handle the availability case in the route itself.
         "dataConstraints",
         "contentConstraints",
