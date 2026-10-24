@@ -6,6 +6,7 @@
 [![Docs](https://github.com/StatCat-Suite/sdmxlib-rest/actions/workflows/docs.yml/badge.svg)](https://statcat-suite.github.io/sdmxlib-rest/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![CI](https://github.com/StatCat-Suite/sdmxlib-rest/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/StatCat-Suite/sdmxlib-rest/actions/workflows/ci.yml)
 
 > **Note:** This library has been written extensively with AI assistance
 > (Claude Code). Users who are not comfortable with AI-generated code should
