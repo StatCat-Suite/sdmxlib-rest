@@ -121,6 +121,11 @@ the sequence; change that assertion only together with the docstring.
   (`just check-docstrings`). Skip docstrings on trivial getters.
 - No comments that restate the code. Only WHY-comments.
 - Conventional commits — `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
+- Nothing is signed with Claude: commit messages carry no `Co-Authored-By`
+  trailer, and PR descriptions, issues and comments carry no "Generated with
+  Claude Code" footer. The README's note discloses AI use once for the project.
+- Install instructions (README, docs, error messages) say `uv add <pkg>` first
+  and `pip install <pkg>` second, as the fallback.
 - Tests are plain functions; module-level `pytestmark = pytest.mark.unit`.
 
 ## Writing style
