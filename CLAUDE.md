@@ -126,6 +126,10 @@ the sequence; change that assertion only together with the docstring.
   Claude Code" footer. The README's note discloses AI use once for the project.
 - Install instructions (README, docs, error messages) say `uv add <pkg>` first
   and `pip install <pkg>` second, as the fallback.
+- SLF001 is off (`ruff.toml`), as in sdmxlib. Ruff cannot see package
+  boundaries, so it flags a module reading its own package's `_helpers` and one
+  instance reading another's private state; sdmxlib found no defect in 40
+  suppressed sites. Don't reintroduce `# noqa: SLF001`.
 - Tests are plain functions; module-level `pytestmark = pytest.mark.unit`.
 
 ## Writing style
@@ -230,6 +234,10 @@ a major. `just release-1-preview` through `release-5-pypi`: a release is a
 3-4 publish the CHANGELOG.md section as curated after step 2
 (`just release-notes VERSION`); step 5 builds the checked-out tag and uploads it
 to PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
+
+Every suite library is pre-1.0, so a minor bump may break. `pyproject.toml`
+caps each suite dependency below its next minor (`sdmxlib>=0.72,<0.73`); the
+PR that adopts a new sdmxlib minor raises the cap.
 
 ## Docs site
 

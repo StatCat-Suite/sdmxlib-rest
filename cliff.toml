@@ -31,6 +31,10 @@ filter_unconventional = false
 split_commits = false
 commit_preprocessors = []
 commit_parsers = [
+  # Breaking changes first, in their own group, as sdmxlib and statcatlib parse
+  # them. Matched on the conventional-commit `!` marker before the type-based
+  # rules, since first match wins; without it a `feat!:` lands under Features.
+  { message = "^\\w+(\\([^)]*\\))?!:", group = "Breaking Changes" },
   { message = "^feat", group = "Features" },
   { message = "^model", group = "Features" },
   { message = "^fix", group = "Bug Fixes" },
