@@ -64,7 +64,8 @@ statcatlib or a consumer.
 ## Install
 
 ```bash
-pip install sdmxlib-rest
+uv add sdmxlib-rest
+# or: pip install sdmxlib-rest
 ```
 
 It needs Python 3.14 or later. Each release pins an sdmxlib minor version;

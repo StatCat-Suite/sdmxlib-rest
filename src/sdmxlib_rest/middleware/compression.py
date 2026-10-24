@@ -44,7 +44,7 @@ def install_isal_zip_backend() -> None:
     """
     if getattr(zipfile, "_sdmxlib_rest_isal_patched", False):
         return
-    original = zipfile._get_compressor  # noqa: SLF001  # pyrefly: ignore[missing-attribute]
+    original = zipfile._get_compressor  # pyrefly: ignore[missing-attribute]
 
     # `Any` is the honest return type, not a shrug: the DEFLATED branch yields
     # an `isal_zlib.Compress` (a C extension type with no stub), and the
@@ -59,12 +59,12 @@ def install_isal_zip_backend() -> None:
             return isal_zlib.compressobj(lvl, isal_zlib.DEFLATED, -15)
         return original(compress_type, compresslevel)
 
-    zipfile._get_compressor = _isal_get_compressor  # noqa: SLF001  # pyrefly: ignore[missing-attribute]
+    zipfile._get_compressor = _isal_get_compressor  # pyrefly: ignore[missing-attribute]
     # Refresh the import zipstream-ng captured at its own import time.
     import zipstream.ng  # noqa: PLC0415
 
-    zipstream.ng._get_compressor = _isal_get_compressor  # noqa: SLF001
-    zipfile._sdmxlib_rest_isal_patched = True  # noqa: SLF001  # pyrefly: ignore[missing-attribute]
+    zipstream.ng._get_compressor = _isal_get_compressor
+    zipfile._sdmxlib_rest_isal_patched = True  # pyrefly: ignore[missing-attribute]
 
 
 SKIP_GZIP_CONTENT_TYPES: frozenset[str] = frozenset(

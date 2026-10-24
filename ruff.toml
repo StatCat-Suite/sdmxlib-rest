@@ -61,13 +61,19 @@ ignore = [
   "ERA001", # commented out code can be noisey for if it is actually dead code
   "S608",   # sql-injection — we validate at system boundaries, not in query construction
   "TC",     # flake8-type-checking — lazy imports in 3.14 will make this unnecessary
+
+  # ── Private access ───────────────────────────────────────────────────────
+  # private-member-access. Off suite-wide (StatCat-Suite/sdmxlib#58): ruff
+  # cannot see package boundaries, so it flags a module reading its own
+  # package's underscored helpers; sdmxlib found no defect in 40 such sites.
+  "SLF001",
 ]
 
 [lint.per-file-ignores]
 # Init files: allow re-exports and unordered imports
 "__init__.py" = ["E402", "F401", "I"]
 # Tests: skip docstrings, annotations, security checks, and unused-arg checks
-"tests/**/*.py" = ["D", "ANN", "S101", "ARG", "SLF001", "PLC0415"]
+"tests/**/*.py" = ["D", "ANN", "S101", "ARG", "PLC0415"]
 # Tools: standalone scripts run with `python tools/x.py`, not a package; they
 # print their report and call `git` from PATH, and their exceptions carry
 # messages for a terminal, so the exception-message rules do not fit.

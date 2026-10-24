@@ -1,5 +1,16 @@
 # sdmxlib-rest
 
+[![PyPI](https://img.shields.io/pypi/v/sdmxlib-rest)](https://pypi.org/project/sdmxlib-rest/)
+[![Python](https://img.shields.io/pypi/pyversions/sdmxlib-rest)](https://pypi.org/project/sdmxlib-rest/)
+[![License](https://img.shields.io/pypi/l/sdmxlib-rest)](LICENSE)
+[![Docs](https://github.com/StatCat-Suite/sdmxlib-rest/actions/workflows/docs.yml/badge.svg)](https://statcat-suite.github.io/sdmxlib-rest/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+> **Note:** This library has been written extensively with AI assistance
+> (Claude Code). Users who are not comfortable with AI-generated code should
+> take that into account before adopting it.
+
 A generic [SDMX-REST](https://github.com/sdmx-twg/sdmx-rest) HTTP surface over a
 [sdmxlib](https://github.com/StatCat-Suite/sdmxlib) `LocalRegistry`.
 
