@@ -31,10 +31,9 @@ def decimals_format_replace_clause(
 
     The problem this solves is generic to SDMX: a single ``OBS_VALUE`` column
     typed ``DOUBLE`` has to carry counts, percentages, rates and medians at
-    once, so the wire format needs per-row precision rather than one column-wide
-    format. ``DECIMALS`` is the standard attribute that carries it. NULL inputs
-    (missing DECIMALS, suppressed value) propagate to NULL — ``printf``
-    short-circuits.
+    once, so the wire format needs per-row precision. ``DECIMALS`` is the
+    standard attribute that carries it. NULL inputs (missing DECIMALS,
+    suppressed value) propagate to NULL — ``printf`` short-circuits.
 
     Each target is looked up in the measure map **and** the attribute map: a
     producer may model confidence bounds either way, and the underlying column

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 # registry -> flow URN -> key-dimension ids, in the order dotted keys are parsed
-# against. Per registry, not per process: a runtime can be closed and reopened
+# against. Keyed per registry because a runtime can be closed and reopened
 # on a new build in the same process (a consumer's catalog may be), and a flow URN alone
 # would then keep answering with the previous build's dimension order. Weak, so
 # the entries go with the registry they describe.
@@ -198,11 +198,11 @@ def key_dimension_ids(
         if isinstance(dsd, sl.DataStructure):
             # sdmxlib splits the slot list by REST generation: 1.5/2.1 keeps
             # the time dimension out of the dotted key, 2.2.2 makes it a slot.
-            # Hardcoded rather than threaded through as a parameter because
-            # every path this library publishes is 2.2.2 grammar — there is no
-            # request here that could be the other generation. A service that
-            # also answers 1.5 URLs translates them in a forwarder, which is
-            # the layer that knows which generation it is serving.
+            # Hardcoded to 2.2.2 because every path this library publishes is
+            # 2.2.2 grammar — no request here can be the other generation. A
+            # service that also answers 1.5 URLs translates them in a
+            # forwarder, which is the layer that knows which generation it is
+            # serving.
             result = dsd.key_slot_ids("3.0")
     if result is None:
         result = list(binding.dimension_column_map.keys())
@@ -218,8 +218,8 @@ def label_maps_for_dims(
 ) -> dict[str, dict[str, str]]:
     """Return ``{column_name: {code_id: label}}`` for every key dim bound to a codelist.
 
-    Takes the ``dim_id -> codelist URN`` mapping rather than deriving it, so
-    consumers can supply a cached one. Uses ``LazyCodelist.code_map``, which is
+    Takes the ``dim_id -> codelist URN`` mapping as an argument so consumers
+    can supply a cached one. Uses ``LazyCodelist.code_map``, which is
     itself cached per (codelist_urn, lang). Dims without an enumeration, or
     whose codelist the registry cannot resolve, yield no entry — the CSV emit
     path passes their ids through unchanged.

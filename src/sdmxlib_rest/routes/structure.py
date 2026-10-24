@@ -76,9 +76,9 @@ _ERROR_RESPONSE_SCHEMA = {
     "properties": {"detail": {"type": "string"}},
     "required": ["detail"],
 }
-# 413 / 414 are enforced by the ingress in front of this app, not by it — we
-# declare them in OpenAPI so clients can distinguish "URL too long" from
-# "key parse error" without server-source-diving.
+# The ingress in front of this app enforces 413 / 414. We declare them in
+# OpenAPI so clients can distinguish "URL too long" from "key parse error"
+# without reading the server source.
 _INGRESS_LIMIT_RESPONSES = {
     413: {
         "description": "Payload Too Large — enforced by the ingress; surface returned as-is.",
@@ -487,10 +487,11 @@ async def get_structure(
 
         # Pre-serialise annotation seam: a consumer may project extra annotations
         # onto the model before it is written, so they reach EVERY wire format
-        # (SDMX-JSON 2.0 + SDMX-ML 2.1/3.0), not just the JSON body a post-serialise
-        # splice can touch. A consumer can use this for the .Stat-compat METADATA annotation
-        # that drives Explorer's Overview metadata discovery; the default annotator
-        # is a no-op. Runs before both the XML and JSON branches below.
+        # (SDMX-JSON 2.0 + SDMX-ML 2.1/3.0); a post-serialise splice reaches
+        # only the JSON body. A consumer can use this for the .Stat-compat
+        # METADATA annotation that drives Explorer's Overview metadata
+        # discovery; the default annotator is a no-op. Runs before both the
+        # XML and JSON branches below.
     msg = annotator.annotate(msg, registry=registry, conn=conn, token=token)
 
     accept_lower = (accept or "").lower()
@@ -516,7 +517,7 @@ async def get_structure(
     # ``json.loads`` / ``json.dumps`` independently). The pipeline:
     #   1. HIER_CONTEXT annotation on every DSD
     #      (the METADATA annotation moved UP to the pre-serialise annotator
-    #      seam above, so it reaches XML + JSON, not just this JSON pass.)
+    #      seam above, so it reaches XML as well as JSON.)
     #   2. Codelist hydration per ``detail`` — only on
     #      dataflow queries with referencepartial / full.
     #   3. ConceptScheme concept hydration — same trigger as (2); pulls
@@ -735,8 +736,8 @@ def _stub_lazy(artefact: object) -> object | None:
     extra fields costs ~4 ms against ~565 ms to materialise.
 
     ``init=False`` fields are skipped: they are caches the class derives itself
-    (``Hierarchy._codes``, ``_parent_of``), not constructor arguments, and the
-    wrappers do not expose them.
+    (``Hierarchy._codes``, ``_parent_of``), and the wrappers do not expose
+    them.
     """
     spec = _LAZY_STUB_SPECS.get(type(artefact).__name__)
     if spec is None:
@@ -762,8 +763,8 @@ def _stub_of(artefact: object) -> object:
     codes, so ~3 s per stub on a codelist of half a million codes, on every request (#9).
 
     Only ``Codelist`` is sized today, but the other sites were one sdmxlib
-    release away from the same bug, which is why every stub goes through here
-    rather than through a copy of the expression.
+    release away from the same bug, which is why every stub goes through this
+    function.
     """
     stub = _stub_lazy(artefact)
     return stub if stub is not None else _stub(_materialize(artefact))

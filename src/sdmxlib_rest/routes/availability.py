@@ -569,8 +569,8 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
             # obs_count for mode=available reports the cube cardinality under
             # the FULL filter (all constraints applied) — the same number .Stat
             # / DLM show in the "(N observations)" badge. The per-component
-            # value lists are wider; the badge count stays tied to the user's
-            # actual query rather than to the per-dimension relaxations.
+            # value lists are wider; the badge count covers the user's actual
+            # query.
             obs_count_value = narrowed.count()
         elif fast_path_eligible:
             aliases = {f"c{i}": comp_id for i, comp_id in enumerate(component_ids)}

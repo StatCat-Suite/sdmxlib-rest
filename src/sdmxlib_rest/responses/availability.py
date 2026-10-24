@@ -92,7 +92,7 @@ def render_availability(
         obs_count: Rows under the FULL filter — every constraint applied, even
             under ``mode=available`` where the per-component lists are wider.
             This is the number .Stat shows in its "(N observations)" badge, so it
-            stays tied to the user's actual query rather than to the relaxations.
+            counts the user's actual query.
         accept: Drives XML vs JSON. Browser ``Accept`` headers naming XML are
             treated as wanting JSON.
         accept_language: Localises the JSON body.
@@ -108,9 +108,9 @@ def render_availability(
         maintainer=sl.Agency(id=flow_urn.agency),
         # Every NameableArtefact requires a name — sdmxlib validates on
         # serialise, and an unnamed constraint cannot be written in any of the
-        # three formats this emits. Derived rather than configurable: the
-        # constraint is synthesised per request, so there is nobody to ask for a
-        # better one, and the flow plus component is what identifies it.
+        # three formats this emits. The name is derived from the flow and
+        # component, which identify the constraint; it is synthesised per
+        # request, so no caller can supply a better one.
         name=sl.InternationalString(en=f"Availability for {flow_urn.id} ({component_id})"),
         version="1.0",
         constraint_type=ConstraintType.ACTUAL,

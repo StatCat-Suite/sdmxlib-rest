@@ -88,7 +88,7 @@ class RestSettings:
 class Mount:
     """A sub-app mounted under the main app.
 
-    Mounted as a sub-app rather than a prefixed router so it publishes its own
+    Mounted as a sub-app so it publishes its own
     ``/openapi.json``, which is what lets the docs page offer a spec dropdown.
     The mount shares the parent's runtime — one catalog open serves every
     surface — and receives a copy of the parent's ``state``, because request
@@ -196,8 +196,8 @@ def create_app(
         docs_url=None,
         redoc_url=None,
         lifespan=_lifespan,
-        # Reject unknown query params with 400 rather than silently ignoring
-        # them. App-wide; the dependency is one declared-set build per request.
+        # Reject unknown query params with 400; FastAPI ignores them by
+        # default. App-wide; the dependency is one declared-set build per request.
         dependencies=[Depends(reject_unknown_query_params)],
     )
     _apply_state(app, state)
