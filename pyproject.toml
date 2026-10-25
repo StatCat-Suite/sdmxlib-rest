@@ -85,6 +85,19 @@ name = "pypi"
 url = "https://pypi.org/simple"
 default = true
 
+[tool.pydoclint]
+style = "google"
+# Signatures carry the types; Google style keeps them out of the prose, and
+# pyrefly reads the annotations.
+arg-type-hints-in-docstring = false
+check-style-mismatch = true
+# The annotation carries the return type too, for the same reason.
+check-return-types = false
+check-yield-types = false
+# Google style documents __init__'s arguments in either the class docstring or
+# __init__'s own; both are accepted.
+allow-init-docstring = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Unregistered marks and config typos are errors, not warnings: a typo'd

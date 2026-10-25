@@ -1,35 +1,36 @@
 """Fail when a docstring drifts from plain Google style.
 
-Ported from sdmxlib (sdmxlib#374), as part of the StatCat-Suite baseline.
+Ported from sdmxlib (sdmxlib#374) as part of the StatCat-Suite baseline, then
+brought level with statcatlib's version, which adds arms 3 and 4 below. The
+tests in `tests/test_check_docstrings.py` sabotage each arm: sdmxlib's
+pydoclint arm once reported a clean tree on a file it had just flagged.
 
 ## Why this exists, when `ruff.toml` already says `convention = "google"`
 
-Because that setting is not the gate it looks like. Ruff's pydocstyle rules
-check a docstring's **structure** — summary line, blank lines, punctuation —
-and never read its markup or reject a NumPy section header. In the sibling
-statcatlib project (then pinax) the same line sat declared and unenforced for
-the life of the file while 98 Sphinx roles and 13 NumPy-sectioned docstrings
-accumulated underneath it.
+Ruff's pydocstyle rules check a docstring's **structure** (summary line, blank
+lines, punctuation). They never read its markup or reject a NumPy section
+header. With that line declared and nothing checking it, statcatlib (then
+pinax) accumulated 98 Sphinx roles and 13 NumPy-sectioned docstrings.
+sdmxlib-rest carried 61 Sphinx roles in `src/` when the first three arms were
+ported; they were rewritten as plain backticks in the same change.
 
-sdmxlib-rest carried 61 Sphinx roles in `src/` when this was ported; they were
-rewritten as plain backticks in the same change, so every arm starts at zero
-and stays there as a regression guard.
+## The four arms
 
-## The three arms
-
-1. **No Sphinx/RST roles.** A grep, because no tool in the ecosystem models
-   this: pydoclint and griffe both parse ``:class:`X` `` as ordinary prose,
-   correctly, since banning a markup dialect is house policy rather than a
-   correctness property.
-2. **No NumPy section underlines** — matched as a section *name* followed by a
-   rule, never a bare rule, so a prose heading underlined RST-style is not a
-   finding (sdmxlib has three; a naive ``^-{3,}$`` grep flags them).
-3. **pydoclint `DOC003`** — a docstring whose shape is not Google even without
-   an underline. Off by default upstream; needs `--check-style-mismatch`.
-
-Only DOC003 is consulted. pydoclint's other codes (missing ``Args``,
-``Returns`` and the like) are a separate question this gate takes no position
-on.
+1. **No Sphinx/RST markup:** cross-reference roles (`:class:` and every other
+   role in the dialect) and `Example::` literal blocks. A grep, because banning
+   a markup dialect is house policy, and pydoclint correctly parses roles as
+   ordinary prose.
+2. **No NumPy section underlines**, matched as a section *name* followed by a
+   rule. A rule under anything else is a prose heading in a module docstring,
+   which is fine and common.
+3. **No `Parameters:` / `Arguments:` / `Params:` headings.** Google spells the
+   section `Args:`. pydoclint parses the others well enough that DOC003 stays
+   quiet. statcatlib's arm.
+4. **pydoclint, in full**, with the settings in `pyproject.toml`'s
+   `[tool.pydoclint]`: a docstring that is not Google (DOC003), and one that
+   disagrees with its signature (missing args, undocumented raises, a return
+   section with no return). sdmxlib consults only DOC003, because its tree
+   carries 600-odd other findings; statcatlib and sdmxlib-rest cleared theirs.
 
 ## Usage
 
@@ -39,19 +40,22 @@ on.
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
-#: Checked as a whole. Tests and benchmarks carry docstrings that are prose for
-#: a reader rather than API documentation, and the convention this enforces is
-#: about the published surface.
+#: The published surface. Tests carry docstrings that are prose for a reader,
+#: and the convention this enforces is about API documentation.
 TARGET = "src"
-#: Every tree checked. One that does not exist under the root is skipped.
-TARGETS = (TARGET,)
+
+#: The repo root, whose ``pyproject.toml`` holds pydoclint's settings. Passed
+#: to pydoclint explicitly, so a run over another root uses the same ones.
+ROOT = Path(__file__).resolve().parent.parent
 
 #: Sphinx/RST cross-reference roles. The list is the dialect, not the subset
-#: seen so far — a guard that only bans what already appeared bans nothing.
+#: seen so far: a guard that only bans what already appeared bans nothing.
 _ROLE_NAMES = (
     "class",
     "meth",
@@ -71,12 +75,12 @@ _ROLE_NAMES = (
 )
 ROLE_RE = re.compile(rf":(?:py:)?(?:{'|'.join(_ROLE_NAMES)}):`")
 
-#: ``Example::`` and friends — the RST literal-block marker, which Google style
-#: spells as an ``Example:`` section with an indented body.
+#: ``Example::`` and friends, the RST literal-block marker. Google style spells
+#: it as an ``Example:`` section with an indented body.
 LITERAL_BLOCK_RE = re.compile(r"^\s*(Example|Examples|Usage|Note|Warning)::\s*$")
 
 #: NumPy section names. A line holding one of these *followed by a rule* is a
-#: NumPy section; a rule under anything else is a prose heading and fine.
+#: NumPy section; a rule under anything else is a prose heading.
 _SECTIONS = (
     "Parameters",
     "Other Parameters",
@@ -93,126 +97,141 @@ _SECTIONS = (
     "Attributes",
     "Methods",
 )
-SECTION_RE = re.compile(rf"^\s*(?:{'|'.join(_SECTIONS)})\s*$")
+SECTION_RE = re.compile(rf"^\s*(?:{'|'.join(_SECTIONS)}):?\s*$")
 RULE_RE = re.compile(r"^\s*[-=~^]{3,}\s*$")
 
-Finding = tuple[str, int, str]
+#: The argument section under a name other than Google's ``Args:``.
+NOT_ARGS_RE = re.compile(r"^\s*(Parameters|Arguments|Params):\s*$")
 
+#: One pydoclint finding: ``    12: DOC101: Function `f`: ...``.
+PYDOCLINT_FINDING_RE = re.compile(r"^\s*(\d+):\s*(DOC\d+:.*)$")
 
-def _targets(root: Path) -> list[str]:
-    return [target for target in TARGETS if (root / target).is_dir()]
+type Finding = tuple[str, int, str]
 
 
 def _python_files(root: Path) -> list[Path]:
-    files = (p for target in _targets(root) for p in (root / target).rglob("*.py"))
-    return sorted(p for p in files if "__pycache__" not in p.parts)
+    target = root / TARGET
+    if not target.is_dir():
+        return []
+    return sorted(p for p in target.rglob("*.py") if "__pycache__" not in p.parts)
+
+
+def _lines(root: Path) -> list[tuple[str, list[str]]]:
+    return [(str(p.relative_to(root)), p.read_text(encoding="utf-8").splitlines()) for p in _python_files(root)]
 
 
 def rst_markup(root: Path) -> list[Finding]:
     """Every Sphinx role and RST literal-block marker under `TARGET`."""
     found: list[Finding] = []
-    for path in _python_files(root):
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for path, lines in _lines(root):
+        for number, line in enumerate(lines, start=1):
             if ROLE_RE.search(line):
-                found.append((str(path.relative_to(root)), number, f"Sphinx role: {line.strip()}"))
+                found.append((path, number, f"Sphinx role: {line.strip()}"))
             elif LITERAL_BLOCK_RE.match(line):
-                found.append((str(path.relative_to(root)), number, f"RST literal block: {line.strip()}"))
+                found.append((path, number, f"RST literal block: {line.strip()}"))
     return found
 
 
 def numpy_sections(root: Path) -> list[Finding]:
-    """Every NumPy section header — a section *name* underlined by a rule.
+    """Every NumPy section header: a section *name* underlined by a rule.
 
-    Deliberately not every underlined line: a prose heading under an RST rule
-    is a perfectly good Google-style docstring, and a rule-only match calls it
-    a NumPy section — the false positive sdmxlib#374 warned about by name.
+    Deliberately not every underlined line. A module docstring may head its
+    prose with an RST rule, and that is a good Google-style docstring; a
+    rule-only match calls it a NumPy section.
     """
     found: list[Finding] = []
-    for path in _python_files(root):
-        lines = path.read_text(encoding="utf-8").splitlines()
+    for path, lines in _lines(root):
         for number, line in enumerate(lines[:-1], start=1):
             if SECTION_RE.match(line) and RULE_RE.match(lines[number]):
-                found.append((str(path.relative_to(root)), number, f"NumPy section: {line.strip()!r} underlined"))
+                found.append((path, number, f"NumPy section: {line.strip()!r} underlined"))
     return found
 
 
-def style_mismatches(root: Path) -> list[Finding]:
-    """Pydoclint's DOC003 — a docstring that is not Google style.
+def argument_section_names(root: Path) -> list[Finding]:
+    """Every argument section spelled other than ``Args:``."""
+    found: list[Finding] = []
+    for path, lines in _lines(root):
+        for number, line in enumerate(lines, start=1):
+            if NOT_ARGS_RE.match(line):
+                found.append((path, number, f"Google spells this section 'Args:': {line.strip()}"))
+    return found
 
-    Every other code is discarded. pydoclint exits non-zero whenever it reports
-    anything, which here is the normal case, so only a crash counts as failure.
+
+def pydoclint_findings(root: Path) -> list[Finding]:
+    """Every pydoclint finding under `TARGET`, with the repo's settings.
+
+    pydoclint exits 1 whenever it reports anything, so only another exit code
+    counts as a failure to run.
     """
+    if not (root / TARGET).is_dir():
+        return []
+    uv = shutil.which("uv")
+    if uv is None:
+        sys.stderr.write("check_docstrings: uv is not on PATH\n")
+        raise SystemExit(2)
+    # S603 asks for a literal argument list; the executable is a resolved path
+    # and the arguments are this module's own constants.
     proc = subprocess.run(  # noqa: S603
-        [
-            "uv",
-            "run",
-            "pydoclint",
-            "--style=google",
-            "--check-style-mismatch=True",
-            "--arg-type-hints-in-docstring=False",
-            "--quiet",
-            *_targets(root),
-        ],
+        [uv, "run", "pydoclint", f"--config={ROOT / 'pyproject.toml'}", "--quiet", TARGET],
         cwd=root,
         capture_output=True,
         text=True,
         check=False,
     )
-    if proc.returncode not in (0, 1):
+    if proc.returncode not in {0, 1}:
         sys.stderr.write(f"pydoclint failed to run:\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}\n")
         raise SystemExit(2)
 
-    # **stderr, not stdout.** pydoclint 0.9 writes its findings to stderr and
-    # leaves stdout empty, so a parser reading stdout reports a clean tree
-    # forever. Caught by sabotaging the arm rather than by reading the docs —
-    # which is the argument for sabotaging every arm of a gate that starts at
-    # zero, since "no findings" is what it says when it works *and* when it
-    # does not.
+    # stderr, and stdout too. pydoclint writes its findings to stderr and
+    # leaves stdout empty, so a parser reading stdout alone reports a clean
+    # tree forever. sdmxlib's arm shipped that way and was caught only by
+    # sabotage; `test_check_docstrings.py` runs pydoclint on a real finding.
     found: list[Finding] = []
     current = ""
     for raw in (proc.stderr + proc.stdout).splitlines():
         line = raw.rstrip()
         if line.endswith(".py"):
             current = line
-        elif "DOC003" in line:
-            number, _, message = line.strip().partition(":")
-            found.append((current, int(number) if number.isdigit() else 0, message.strip() or line.strip()))
+        elif match := PYDOCLINT_FINDING_RE.match(line):
+            found.append((current, int(match.group(1)), match.group(2)))
     return found
 
 
-ARMS = (
+ARMS: tuple[tuple[str, Callable[[Path], list[Finding]]], ...] = (
     ("Sphinx/RST markup", rst_markup),
     ("NumPy section headers", numpy_sections),
-    ("pydoclint DOC003 (not Google style)", style_mismatches),
+    ("argument section named other than Args:", argument_section_names),
+    ("pydoclint", pydoclint_findings),
 )
 
 
 def main() -> int:
-    """Run every arm and report; with --check, exit 1 on any finding."""
+    """Run every arm over the repo and report; with ``--check``, exit 1 on any finding.
+
+    Returns:
+        The process exit code.
+    """
     parser = argparse.ArgumentParser(description="Docstring convention gate")
     parser.add_argument("--check", action="store_true", help="exit 1 when any finding is present")
     args = parser.parse_args()
 
-    root = Path(__file__).resolve().parent.parent
+    out = sys.stdout
     total = 0
     for label, arm in ARMS:
-        found = arm(root)
+        found = arm(ROOT)
         total += len(found)
         if not found:
-            print(f"  ok    {label}")
+            out.write(f"  ok    {label}\n")
             continue
-        print(f"  FAIL  {label} — {len(found)}")
+        out.write(f"  FAIL  {label} — {len(found)}\n")
         for file, line, message in found:
-            print(f"          {file}:{line}  {message}")
+            out.write(f"          {file}:{line}  {message}\n")
 
     if not total:
-        print(f"{', '.join(f'{target}/' for target in _targets(root))}: docstrings are plain Google style")
+        out.write(f"{TARGET}/: docstrings are plain Google style\n")
         return 0
     if args.check:
-        print(
-            f"\n{total} finding(s). The convention is pure Google-style "
-            f"docstrings — no RST roles, no NumPy sections (CLAUDE.md, Style)."
-        )
+        out.write(f"\n{total} finding(s). CLAUDE.md's convention is pure Google-style docstrings (Style).\n")
         return 1
     return 0
 

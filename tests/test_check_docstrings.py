@@ -1,19 +1,15 @@
-"""Tests for `tools/check_docstrings.py` — the docstring convention gate (sdmxlib#374).
+"""Tests for `tools/check_docstrings.py`, the docstring convention gate.
 
-A gate tool needs tests for the reason `test_count_any.py` gives: when it
-breaks, it breaks **open**. A check that finds nothing reports the same green
-whether the tree is clean or the check is broken, and nobody investigates a
-passing gate.
+Ported from statcatlib's `tests/test_check_docstrings.py`, itself ported from
+sdmxlib's. A gate breaks
+**open**: a check that finds nothing reports the same green whether the tree is
+clean or the check is broken. So each arm is shown to catch its own violation,
+and the NumPy arm is shown to leave a prose heading alone.
 
-That is not hypothetical: in sdmxlib the pydoclint arm shipped reading `proc.stdout`,
-which is empty — pydoclint 0.9 writes findings to stderr — so it reported a
-clean tree on a file it had just flagged. It was caught by sabotaging the arm,
-and the cases below are the standing version of that sabotage.
-
-Two things get equal weight: that each arm **catches** its own violation, and
-that the NumPy arm does **not** fire on a prose heading. sdmxlib#374 predicted the
-second by name, because sdmxlib's `_dto.py` and `metadata_annotation.py` head prose with
-an RST rule and a naive `^-{3,}$` grep calls all three NumPy sections.
+sdmxlib's pydoclint arm shipped reading stdout, where pydoclint writes nothing,
+and reported a clean tree on a file it had just flagged. Here the pydoclint arm
+runs pydoclint on a real finding, which fails if the parser reads the wrong
+stream.
 """
 
 from __future__ import annotations
@@ -24,7 +20,6 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-# `tools/` is not a package, so the tool is loaded by path.
 _TOOL = ROOT / "tools" / "check_docstrings.py"
 _spec = importlib.util.spec_from_file_location("check_docstrings", _TOOL)
 assert _spec is not None
@@ -36,10 +31,10 @@ pytestmark = pytest.mark.unit
 
 
 def _tree(tmp_path: Path, body: str) -> Path:
-    """A throwaway root holding `src/probe.py`, so the arms can scan it."""
-    src = tmp_path / check_docstrings.TARGET / "pkg"
-    src.mkdir(parents=True)
-    (src / "probe.py").write_text(body, encoding="utf-8")
+    """A throwaway root holding one module under `TARGET`, for the arms to scan."""
+    target = tmp_path / check_docstrings.TARGET
+    target.mkdir(parents=True)
+    (target / "probe.py").write_text(body, encoding="utf-8")
     return tmp_path
 
 
@@ -51,12 +46,7 @@ def _tree(tmp_path: Path, body: str) -> Path:
     [":class:`Codelist`", ":meth:`get`", ":func:`parse`", ":exc:`ValueError`", ":py:attr:`id`", ":ref:`guide`"],
 )
 def test_a_sphinx_role_is_found(tmp_path: Path, role: str) -> None:
-    """The list is the dialect, not the subset seen so far.
-
-    A guard that only bans what already appeared bans nothing — `:exc:`,
-    `:ref:` and the `py:`-prefixed spellings had never occurred here, which is
-    exactly why they are the ones that would slip in.
-    """
+    """The list is the dialect: `:ref:` and the `py:` spellings count too."""
     found = check_docstrings.rst_markup(_tree(tmp_path, f'"""Summary naming {role} the RST way."""\n'))
     assert len(found) == 1
     assert role in found[0][2]
@@ -69,7 +59,7 @@ def test_an_rst_literal_block_is_found(tmp_path: Path) -> None:
 
 
 def test_a_google_example_section_is_not_markup(tmp_path: Path) -> None:
-    """One colon is the Google spelling and must stay legal."""
+    """One colon is the Google spelling and stays legal."""
     body = '"""Summary.\n\n    Example:\n        x = 1\n    """\n'
     assert check_docstrings.rst_markup(_tree(tmp_path, body)) == []
 
@@ -85,57 +75,81 @@ def test_a_numpy_section_is_found(tmp_path: Path, section: str) -> None:
     assert section in found[0][2]
 
 
-@pytest.mark.parametrize(
-    "heading",
-    ["Conventions for wire Structs — read before adding one", "Why a *projection*, not persisted DSD content"],
-)
-def test_a_prose_heading_is_not_a_numpy_section(tmp_path: Path, heading: str) -> None:
-    """The false positive sdmxlib#374 named, taken verbatim from the two files it named.
+def test_an_underlined_section_with_a_colon_is_found(tmp_path: Path) -> None:
+    """The old recipe matched `Returns:` underlined too; the port keeps that."""
+    body = '"""Summary.\n\n    Returns:\n    --------\n    int\n    """\n'
+    assert len(check_docstrings.numpy_sections(_tree(tmp_path, body))) == 1
 
-    sdmxlib's `_dto.py` and `metadata_annotation.py` head prose with an RST rule. Matching
-    a bare rule calls those NumPy sections and fails a clean tree, which is the
-    one outcome worse than not checking at all.
-    """
+
+def test_a_prose_heading_is_not_a_numpy_section(tmp_path: Path) -> None:
+    """A module docstring may head prose with an RST rule; that is not a NumPy section."""
+    heading = "Conventions for wire Structs, read before adding one"
     body = f'"""Summary.\n\n{heading}\n{"-" * len(heading)}\nBecause.\n"""\n'
     assert check_docstrings.numpy_sections(_tree(tmp_path, body)) == []
 
 
 def test_a_google_section_is_not_a_numpy_section(tmp_path: Path) -> None:
-    """`Returns:` with a colon and no rule is the Google spelling."""
-    body = '"""Summary.\n\n    Returns:\n        int: A thing.\n    """\n'
+    body = '"""Summary.\n\n    Returns:\n        A thing.\n    """\n'
     assert check_docstrings.numpy_sections(_tree(tmp_path, body)) == []
 
 
-def test_a_rule_on_the_last_line_does_not_run_off_the_end(tmp_path: Path) -> None:
+def test_a_section_name_on_the_last_line_does_not_run_off_the_end(tmp_path: Path) -> None:
     """The arm looks one line ahead; a section name as the final line must not raise."""
     assert check_docstrings.numpy_sections(_tree(tmp_path, "# Returns\nReturns")) == []
+
+
+# ── arm 3: the argument section's name ────────────────────────────────────
+
+
+@pytest.mark.parametrize("name", ["Parameters", "Arguments", "Params"])
+def test_an_argument_section_not_named_args_is_found(tmp_path: Path, name: str) -> None:
+    body = f'def f(x: int) -> None:\n    """Summary.\n\n    {name}:\n        x: A thing.\n    """\n'
+    found = check_docstrings.argument_section_names(_tree(tmp_path, body))
+    assert len(found) == 1
+    assert name in found[0][2]
+
+
+def test_args_is_the_google_spelling(tmp_path: Path) -> None:
+    body = 'def f(x: int) -> None:\n    """Summary.\n\n    Args:\n        x: A thing.\n    """\n'
+    assert check_docstrings.argument_section_names(_tree(tmp_path, body)) == []
+
+
+# ── arm 4: pydoclint, run for real ────────────────────────────────────────
+
+
+def test_pydoclint_reports_an_undocumented_argument(tmp_path: Path) -> None:
+    """The sabotage case: a real finding must come back as a finding."""
+    body = 'def f(x: int, y: int) -> None:\n    """Summary.\n\n    Args:\n        x: A thing.\n    """\n'
+    found = check_docstrings.pydoclint_findings(_tree(tmp_path, body))
+    assert found, "pydoclint flagged `y` as undocumented, and the arm must say so"
+    assert all(f[0].endswith("probe.py") for f in found)
+    assert any("DOC101" in f[2] or "DOC103" in f[2] for f in found)
+
+
+def test_pydoclint_passes_a_google_docstring(tmp_path: Path) -> None:
+    body = (
+        "def f(x: int) -> int:\n"
+        '    """Summary.\n\n    Args:\n        x: A thing.\n\n    Returns:\n        It.\n    """\n'
+        "    return x\n"
+    )
+    assert check_docstrings.pydoclint_findings(_tree(tmp_path, body)) == []
 
 
 # ── the arms are wired in ─────────────────────────────────────────────────
 
 
 def test_every_arm_is_registered() -> None:
-    """`ARMS` is what `main` iterates, so an arm not in it does not run.
-
-    The failure mode this catches is silent: adding a check function and
-    forgetting the tuple leaves a green gate that never calls it.
-    """
+    """`ARMS` is what `main` iterates, so an arm left out of it never runs."""
     registered = {arm for _, arm in check_docstrings.ARMS}
     assert registered == {
         check_docstrings.rst_markup,
         check_docstrings.numpy_sections,
-        check_docstrings.style_mismatches,
+        check_docstrings.argument_section_names,
+        check_docstrings.pydoclint_findings,
     }
 
 
-def test_the_pydoclint_arm_reads_the_stream_pydoclint_writes_to() -> None:
-    """pydoclint 0.9 writes findings to **stderr** and leaves stdout empty.
-
-    Asserted against the source rather than by running pydoclint, because the
-    bug this guards is a parser reading the wrong stream — which produces no
-    findings, which is indistinguishable from a clean tree in any end-to-end
-    check. If a later pydoclint moves to stdout, this fails and says where to
-    look.
-    """
-    source = _TOOL.read_text(encoding="utf-8")
-    assert "proc.stderr" in source, "the arm must consult stderr, where pydoclint writes"
+def test_the_repo_is_clean() -> None:
+    """The gate starts at zero; a finding here is a real docstring to fix."""
+    findings = [(arm.__name__, f) for _, arm in check_docstrings.ARMS for f in arm(ROOT)]
+    assert findings == []

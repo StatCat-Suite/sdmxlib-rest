@@ -72,11 +72,18 @@ class OverlayAnnotator:
 
     @classmethod
     def from_files(cls, paths: Iterable[str | Path], *, merge: Mapping[str, Merge] | None = None) -> Self:
-        """An annotator applying the overlay documents at ``paths``, in order.
+        """Build an annotator applying the overlay documents at ``paths``, in order.
 
-        Raises:
-            sdmxlib.bundle.OverlayError: If a file is not an overlay document
-                this sdmxlib can read.
+        A file that is not an overlay document this sdmxlib can read raises
+        `sdmxlib.bundle.OverlayError` from `read_overlay`.
+
+        Args:
+            paths: Overlay documents, applied in this order.
+            merge: Per annotation type, how a ``set`` combines with the
+                annotations already there. Replace by default.
+
+        Returns:
+            The annotator.
         """
         return cls(overlays=tuple(read_overlay(p) for p in paths), merge=merge)
 

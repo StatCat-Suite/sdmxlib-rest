@@ -185,6 +185,9 @@ def key_dimension_ids(
         registry: Registry used to resolve the flow and its DSD.
         flow_urn: URN of the dataflow.
         binding: Supplies the fallback dimension order.
+
+    Returns:
+        The key-dimension ids, in the order dotted keys are parsed against.
     """
     cache_key = str(flow_urn)
     per_registry = _KEY_DIM_IDS_CACHE.setdefault(registry, {})
@@ -216,7 +219,7 @@ def label_maps_for_dims(
     binding: sl.DataflowBinding,
     lang: str,
 ) -> dict[str, dict[str, str]]:
-    """Return ``{column_name: {code_id: label}}`` for every key dim bound to a codelist.
+    """Map each key dim bound to a codelist to its code labels.
 
     Takes the ``dim_id -> codelist URN`` mapping as an argument so consumers
     can supply a cached one. Uses ``LazyCodelist.code_map``, which is
@@ -229,6 +232,9 @@ def label_maps_for_dims(
         dim_codelist_urns: ``dim_id -> codelist URN`` for the flow's key dims.
         binding: Supplies the ``dim_id -> physical column`` mapping.
         lang: Language tag passed to ``code_map``.
+
+    Returns:
+        ``{column_name: {code_id: label}}``, keyed on the physical column.
     """
     out: dict[str, dict[str, str]] = {}
     for dim_id, cl_urn in dim_codelist_urns.items():

@@ -135,9 +135,10 @@ def _narrow(
         non_eq_filters: ``{component_id: [(op, value), ...]}`` for the other operators.
         periods: ``(time_dimension_id, startPeriod, endPeriod)``, the 1.5 backport.
 
-    Raises:
-        KeyError: If a filter names a component this dataflow has not got,
-            with the ones it has; the caller turns that into a 400.
+    Returns:
+        The narrowed query. A filter naming a component this dataflow has not
+        got raises `KeyError` from sdmxlib, listing the ones it has; the caller
+        turns that into a 400.
     """
     predicates = [_NON_EQ[op](obs.col(cid), value) for cid, terms in non_eq_filters.items() for op, value in terms]
     time_id, start, end = periods

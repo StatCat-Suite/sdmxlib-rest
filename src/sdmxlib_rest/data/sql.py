@@ -25,9 +25,7 @@ def decimals_format_replace_clause(
     """Build ``REPLACE`` arguments formatting numeric columns to per-row precision.
 
     Wraps each target in ``printf('%.*f', DECIMALS, value)`` so the row's own
-    ``DECIMALS`` attribute drives the decimal places. Returns an empty string
-    when the binding declares no ``decimals_id`` attribute or none of the
-    targets resolve — in either case a plain ``SELECT *`` is correct.
+    ``DECIMALS`` attribute drives the decimal places.
 
     The problem this solves is generic to SDMX: a single ``OBS_VALUE`` column
     typed ``DOUBLE`` has to carry counts, percentages, rates and medians at
@@ -43,6 +41,11 @@ def decimals_format_replace_clause(
         binding: Supplies both column maps.
         targets: Component IDs to format, e.g. ``("OBS_VALUE",)``.
         decimals_id: Attribute ID carrying the per-row precision.
+
+    Returns:
+        The ``REPLACE`` arguments, or an empty string when the binding
+        declares no ``decimals_id`` attribute or none of the targets resolve.
+        In either case a plain ``SELECT *`` is correct.
     """
     decimals_col = binding.attribute_column_map.get(decimals_id)
     if not decimals_col:
@@ -59,7 +62,7 @@ def decimals_format_replace_clause(
 
 
 def qualify_is_active(cardinality: int, n_cap: int) -> bool:
-    """Return False when ``firstNObservations`` / ``lastNObservations`` is a logical no-op.
+    """Decide whether ``firstNObservations`` / ``lastNObservations`` needs a QUALIFY.
 
     The ``QUALIFY row_number() OVER (PARTITION BY <series> ORDER BY <time>) <= N``
     pattern is expensive: the Window operator blocks partition pruning from
@@ -75,6 +78,9 @@ def qualify_is_active(cardinality: int, n_cap: int) -> bool:
         cardinality: Distinct values of the time dimension for this flow.
             Callers typically supply a cached probe.
         n_cap: The requested first/last N.
+
+    Returns:
+        False when the cap would keep every row, so the QUALIFY can be skipped.
     """
     if n_cap <= 0:
         return True

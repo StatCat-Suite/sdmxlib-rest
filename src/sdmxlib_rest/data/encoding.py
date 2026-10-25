@@ -37,6 +37,19 @@ def emit_csv_with_labels(
     Attributes and measures pass through unchanged — labels only make sense
     for enumerated key dims.
 
+    Args:
+        batches: The result rows, in the binding's physical column names.
+        binding: Maps each component to its physical column.
+        structure_id: The ``STRUCTURE_ID`` value.
+        label_maps: ``{column_name: {code_id: label}}``, from
+            `label_maps_for_dims`. A dim missing from it gets no label column.
+        structure_kind: The ``STRUCTURE`` value.
+        action: The ``ACTION`` value.
+
+    Yields:
+        One encoded chunk per batch, the first carrying the header line; the
+        header alone when ``batches`` is empty.
+
     Raises:
         KeyError: If a batch is missing a column the binding declares.
     """
