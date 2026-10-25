@@ -169,6 +169,9 @@ def create_app(
             ``runtime.close()``. Supply one only if you need to close something
             more than the runtime; it takes over responsibility for doing so.
         root_payload: JSON body for ``GET /``. Defaults to a service identity.
+
+    Returns:
+        The assembled app, with the catalog still closed until startup.
     """
     # Routes DEFLATE through isa-l instead of stdlib zlib — same wire format,
     # ~2-3x throughput at the low compression levels we use. Idempotent.

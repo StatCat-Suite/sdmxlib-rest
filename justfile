@@ -41,8 +41,9 @@ checkfmt:
     uv run ruff format --check src tests tools
 
 # Ruff's `convention = "google"` checks a docstring's structure and never its
-# markup, so it let 61 Sphinx roles accumulate here. Three arms: Sphinx roles
-# and RST literal blocks, NumPy section headers, and pydoclint's DOC003.
+# markup, so it let 61 Sphinx roles accumulate here. Four arms, as in
+# statcatlib: Sphinx roles and RST literal blocks, NumPy section headers,
+# argument sections not named `Args:`, and pydoclint in full.
 #
 # Fail if a docstring in src/ is not plain Google style
 [group('dev')]

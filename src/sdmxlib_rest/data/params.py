@@ -105,15 +105,15 @@ def parse_c_params(
     operator terms — matches the spec example
     ``c[TIME_PERIOD]=ge:2020-01+le:2020-12``.
 
-    Returns ``(eq_values, non_eq_terms)``:
-
-    - ``eq_values[dim_id]`` is the list of values matched as equals (multi-value
-      collapses to ``IN (…)`` via sdmxlib's ``ComponentFilter``).
-    - ``non_eq_terms[dim_id]`` is a list of ``(op, value)`` tuples for the nine
-      remaining operators; the caller renders them as SQL fragments.
-
     Args:
         items: Output of ``request.query_params.multi_items()``.
+
+    Returns:
+        ``(eq_values, non_eq_terms)``. ``eq_values[dim_id]`` is the list of
+        values matched as equals (multi-value collapses to ``IN (…)`` via
+        sdmxlib's ``ComponentFilter``). ``non_eq_terms[dim_id]`` is a list of
+        ``(op, value)`` tuples for the nine remaining operators; the caller
+        renders them as SQL fragments.
     """
     eq_values: dict[str, list[str]] = {}
     non_eq_terms: dict[str, list[tuple[str, str]]] = {}
