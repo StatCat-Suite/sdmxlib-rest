@@ -1,7 +1,7 @@
 """The catalog-provider seam.
 
 The library owns the HTTP shape of SDMX-REST over a
-`sdmxlib.LocalRegistry`. The consumer opens that registry: it supplies
+`sdmxlib.BundleRegistry`. The consumer opens that registry: it supplies
 a `CatalogProvider` whose `open` returns an `OpenedCatalog` — the registry, a raw DuckDB connection,
 and an opaque build manifest.
 
@@ -14,11 +14,10 @@ connection. No library route queries ``meta_conn``; the library hands it to a
 consumer's seams (``ComponentFilterShaper`` via ``FilterContext.conn``,
 ``MessageAnnotator``, ``MetadataStore``) for SQL of their own.
 
-``OpenedCatalog`` names ``LocalRegistry`` as a concrete type because
-``binding_for`` — which every data-plane helper needs — exists only there;
-no Protocol in sdmxlib covers it. sdmxlib 0.48's ``FederatedCatalog``,
-which it replaced, was equally concrete, so a provider returns the same
-kind of type it returned before.
+``OpenedCatalog`` names ``BundleRegistry`` as a concrete type because
+``binding_for``, which every data-plane helper needs, exists only there and
+no Protocol in sdmxlib covers it. ``LocalRegistry.bundle(path)`` returns one,
+read-only; a writable ``LocalRegistry`` is a subclass and passes too.
 
 ``manifest`` is typed ``object | None`` because the library never
 introspects it (only for equality-of-identity in ETag/cache keys via the
@@ -51,7 +50,7 @@ class OpenedCatalog:
     a no-op when the provider passes none.
     """
 
-    registry: sl.LocalRegistry
+    registry: sl.BundleRegistry
     meta_conn: duckdb.DuckDBPyConnection
     manifest: object | None = None
     # Build identity, from the provider's own manifest: ``build_id`` names the

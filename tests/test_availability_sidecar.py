@@ -14,6 +14,7 @@ count (#8). sdmxlib refuses one when the flow's query root is built
 from __future__ import annotations
 
 import datetime as dt
+import functools
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any
@@ -26,7 +27,7 @@ from fastapi.testclient import TestClient
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.filter_shaper import FilterContext
 from sdmxlib_rest.runtime import CatalogRuntime
-from tests.conftest import AGENCY, World, _concept, _WorldProvider, build_world, istr
+from tests.conftest import AGENCY, _concept, _WorldProvider, build_world, istr
 
 pytestmark = pytest.mark.unit
 
@@ -37,6 +38,7 @@ KEY_DIMS = ["REF_AREA", "SEX", "TIME_PERIOD"]
 LEVELS = {"CA": "Country", "US": "Province"}
 
 
+@functools.cache
 def _sidecar(fan: int) -> Callable[[duckdb.DuckDBPyConnection], None]:
     """A sidecar with ``fan`` rows per area, all carrying that area's level."""
 
@@ -48,13 +50,12 @@ def _sidecar(fan: int) -> Callable[[duckdb.DuckDBPyConnection], None]:
     return write
 
 
-def _side_flow(world: World) -> None:
+def _side_flow(registry: sl.LocalRegistry) -> None:
     """``DF_SIDE``: the shared observations, with ``GEO_LEVEL`` declared and bound to the sidecar.
 
     Its own DSD, because the DSL resolves components against the structure:
     a ``GEO_LEVEL`` in the binding alone is not a component it will filter on.
     """
-    registry = world.registry
     registry.add(
         sl.DataStructure(
             id="DSD_SIDE",
@@ -101,7 +102,7 @@ def _side_flow(world: World) -> None:
             dimension_column_map={"REF_AREA": "geo", "SEX": "sex", "TIME_PERIOD": "period"},
             measure_column_map={"OBS_VALUE": "val"},
             attribute_column_map={"GEO_LEVEL": "geo_level"},
-            structural_version="1.0",
+            structural_version="AG:DSD_SIDE(1.0)",
             source_registry="test",
             materialized_at=dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
             bound_at=dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
@@ -111,8 +112,10 @@ def _side_flow(world: World) -> None:
 
 @contextmanager
 def _client(*, fan: int = 1, **runtime: Any) -> Generator[TestClient]:
-    world = build_world(extra_lake=_sidecar(fan))
-    _side_flow(world)
+    # sdmxlib's write_manifest counts each binding's observations, so it
+    # refuses a fan-out sidecar at publish; a provider can still serve one
+    # from a store it opens unpublished, and the route must refuse it there.
+    world = build_world(extra_lake=_sidecar(fan), extra=_side_flow, publish=fan == 1)
     app = create_app(
         CatalogRuntime(_WorldProvider(world), **runtime),
         RestSettings(title="test-sdmx-api", version="0.1.0"),

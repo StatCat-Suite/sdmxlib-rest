@@ -20,9 +20,8 @@ codelist in French vs English                   5.4 s vs 5.4 s
 codelist in SDMX-ML 3.0 vs SDMX-JSON 2.0        5.9 s vs 5.4 s
 ==============================================  ===========================
 
-**This tier opens the bundle read-write.** ``LocalRegistry.bundle`` has no
-read-only mode and takes DuckDB's exclusive lock on ``meta.duckdb``. Point it at
-a synthetic bundle or a copy, never at the bundle a running service holds.
+``LocalRegistry.bundle`` opens the publication read-only, so this tier can run
+beside a service holding the same bundle.
 """
 
 from __future__ import annotations
@@ -88,7 +87,7 @@ def _path(kind: str, artefact: sl.MaintainableArtefact) -> str:
 def served() -> Iterator[Served]:
     path = os.environ.get("SDMXLIB_REST_BENCH_BUNDLE")
     if not path:
-        pytest.skip("set SDMXLIB_REST_BENCH_BUNDLE to a bundle directory to run the bundle tier")
+        pytest.skip("set SDMXLIB_REST_BENCH_BUNDLE to a publication directory to run the bundle tier")
     root = Path(path)
     if not (root / "meta.duckdb").is_file():
         pytest.skip(f"{root} has no meta.duckdb")

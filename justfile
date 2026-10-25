@@ -110,7 +110,7 @@ coverage:
 # that work do not exist at fixture size, so without SDMXLIB_REST_BENCH_BUNDLE
 # every test skips rather than measuring something meaningless.
 #
-# Bundle-tier benchmarks against a real bundle directory
+# Bundle-tier benchmarks against a published bundle (its publication directory)
 [group('test')]
 bench bundle="":
     SDMXLIB_REST_BENCH_BUNDLE="{{bundle}}" uv run pytest -m bundle -s -v
@@ -131,11 +131,11 @@ bench-synthetic shape="large" seed="1":
     set -euo pipefail
     name=$(basename "{{shape}}" .json)
     out="$(pwd)/.bench/synthetic-${name}-{{seed}}"
-    uv run python tools/synthetic_bench.py build "{{shape}}" "${out}" --seed {{seed}}
-    just bench "${out}"
+    publication=$(uv run python tools/synthetic_bench.py build "{{shape}}" "${out}" --seed {{seed}})
+    just bench "${publication}"
 
 # Its output is gitignored (tests/bench/shapes/local/): a real bundle's codelist
-# sizes and observation count identify it. Needs a bundle sdmxlib 0.72 can open.
+# sizes and observation count identify it. Needs a publication sdmxlib 0.74 can open.
 #
 # Write a real bundle's shape for `just bench-synthetic NAME`
 [group('test')]

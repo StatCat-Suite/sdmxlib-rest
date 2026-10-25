@@ -1,17 +1,16 @@
 """A real bundle to measure against, discovered rather than hard-coded.
 
-Opt-in: set ``SDMXLIB_REST_BENCH_BUNDLE`` to a bundle directory containing
-``lake.ducklake``. Without it every test here skips, so ``just test-all`` stays
-green on a machine that has no bundle. ``just bench-synthetic`` builds one from
-a shape in ``tests/bench/shapes/`` and runs this tier on it (GH-37).
+Opt-in: set ``SDMXLIB_REST_BENCH_BUNDLE`` to a publication directory, the
+``<bundle>/<token>/`` holding ``bundle.manifest.json`` and ``lake.ducklake``.
+Without it every test here skips, so ``just test-all`` stays green on a
+machine that has no bundle. ``just bench-synthetic`` builds one from a shape in
+``tests/bench/shapes/`` and runs this tier on it (GH-37).
 
-**Read-only ATTACH rather than a copy.** sdmxlib's equivalent tier copies the
-bundle first because ``LocalRegistry.bundle()`` opens ``meta.duckdb``
-read-write and DuckDB's lock is exclusive — pointing it at a live bundle would
-lock what it measures. Nothing here needs the structural side: these tests
-measure the SQL ``/availability`` runs against the *lake*, which attaches
-``READ_ONLY`` and takes no lock. Measured at 20 ms and +8 MB for a multi-GB
-DuckLake, so there is nothing to amortise by copying.
+**A read-only ATTACH of the lake alone.** These tests measure the SQL
+``/availability`` runs against the *lake*, so they attach ``lake.ducklake``
+``READ_ONLY`` over the data directory the manifest's ``data_path`` names, and
+never open ``meta.duckdb``. Measured at 20 ms and +8 MB for a multi-GB
+DuckLake.
 
 **Discovered, not hard-coded.** The fixture finds the widest table in the lake
 and treats it as the observations table, then any other table sharing columns
@@ -30,6 +29,7 @@ from typing import TYPE_CHECKING
 import duckdb
 import pytest
 from attrs import define
+from sdmxlib.bundle import MANIFEST_NAME, read_manifest
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -122,18 +122,17 @@ def _columns(conn: duckdb.DuckDBPyConnection, table: str) -> list[str]:
 def bundle() -> Iterator[Bundle]:
     path = os.environ.get(_ENV)
     if not path:
-        pytest.skip(f"set {_ENV} to a bundle directory to run the bundle tier")
+        pytest.skip(f"set {_ENV} to a publication directory to run the bundle tier")
     directory = Path(path)
     lake = directory / "lake.ducklake"
-    if not lake.is_file():
-        pytest.skip(f"{lake} is not a file — {_ENV} should name a bundle directory")
+    if not lake.is_file() or not (directory / MANIFEST_NAME).is_file():
+        pytest.skip(f"{directory} holds no lake.ducklake and {MANIFEST_NAME}; {_ENV} should name a publication")
+    data = (directory / read_manifest(directory).data_path).resolve()
 
     # OVERRIDE_DATA_PATH, as sdmxlib's `LocalRegistry.bundle()` does: a catalog
     # records the data path it was written with, often relative to the builder's
     # working directory, and DuckDB 2.0 refuses a DATA_PATH that differs from it.
-    attach = (
-        f"ATTACH 'ducklake:{lake}' AS lake (READ_ONLY, DATA_PATH '{directory / 'parquet'}/', OVERRIDE_DATA_PATH true)"
-    )
+    attach = f"ATTACH 'ducklake:{lake}' AS lake (READ_ONLY, DATA_PATH '{data}/', OVERRIDE_DATA_PATH true)"
     conn = duckdb.connect()
     conn.execute("INSTALL ducklake; LOAD ducklake;")
     conn.execute(attach)
@@ -175,6 +174,6 @@ def bundle() -> Iterator[Bundle]:
         dims=dims,
         rows=rows,
         attach=attach,
-        data_files=tuple(sorted((directory / "parquet").glob("**/*.parquet"))),
+        data_files=tuple(sorted(data.glob("**/*.parquet"))),
     )
     conn.close()

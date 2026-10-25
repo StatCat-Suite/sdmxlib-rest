@@ -29,13 +29,10 @@ BROKEN = "/structure/datastructure/AG/DSD_NOMEAS/1.0"
 SDMX_ML_21 = "application/vnd.sdmx.structure+xml;version=2.1"
 
 
-@pytest.fixture
-def broken_world() -> Iterator[World]:
-    """The shared world plus one DSD with no measures, which only SDMX-ML 2.1 cannot carry."""
-    world = build_world()
-    pop = world.registry.get(sl.DataStructure.urn_for(agency="AG", id="DSD_POP", version="1.0"))
+def _no_measures(registry: sl.LocalRegistry) -> None:
+    pop = registry.get(sl.DataStructure.urn_for(agency="AG", id="DSD_POP", version="1.0"))
     assert isinstance(pop, sl.DataStructure)
-    world.registry.add(
+    registry.add(
         sl.DataStructure(
             id="DSD_NOMEAS",
             maintainer=AGENCY,
@@ -45,6 +42,12 @@ def broken_world() -> Iterator[World]:
             time_dimension=pop.time_dimension,
         )
     )
+
+
+@pytest.fixture
+def broken_world() -> Iterator[World]:
+    """The shared world plus one DSD with no measures, which only SDMX-ML 2.1 cannot carry."""
+    world = build_world(extra=_no_measures)
     yield world
     world.registry.close()
 

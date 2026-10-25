@@ -87,10 +87,14 @@ def test_build_reuses_its_own_bundle_and_rebuilds_for_a_new_seed(tmp_path: Path)
     shape_file = _shape_file(tmp_path, _TINY)
     out = tmp_path / "bundle"
 
-    assert synthetic_bench.build(shape_file, out, seed=1) is True
-    assert (out / "bundle.manifest.json").is_file()
-    assert synthetic_bench.build(shape_file, out, seed=1) is False
-    assert synthetic_bench.build(shape_file, out, seed=2) is True
+    publication, built = synthetic_bench.build(shape_file, out, seed=1)
+    assert built
+    assert publication.parent == out
+    assert (publication / "bundle.manifest.json").is_file()
+    assert synthetic_bench.build(shape_file, out, seed=1) == (publication, False)
+    rebuilt, built = synthetic_bench.build(shape_file, out, seed=2)
+    assert built
+    assert rebuilt != publication
 
 
 def test_build_refuses_a_directory_it_did_not_create(tmp_path: Path) -> None:

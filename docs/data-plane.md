@@ -65,6 +65,12 @@ def data(..., registry=Depends(get_registry)):
     ...
 ```
 
+`binding_for` returns the binding with its `database_role` naming the catalog
+its table is attached as in this registry (`registry.lake_alias` for the lake,
+an alias prefixed with the bundle id and token), so SQL built as
+`<database_role>.<table_location>` reads the right lake. A binding read some other way, with `get_all`, goes through
+`registry.locate(binding)` first.
+
 `get_registry`, `get_meta_conn`, `get_token` and the other request
 dependencies in `sdmxlib_rest.runtime` give a handler the same runtime the
 library routes use. Include the router in `create_app`'s `routers` list.

@@ -23,8 +23,11 @@ counter and do no I/O there.
 The runtime folds it into one token:
 
 ```text
-effective_token = sha256(token + "\n" + fingerprint)
+effective_token = sha256("v2" + "\n" + token + "\n" + fingerprint)
 ```
+
+The `v2` line is the one sdmxlib's `effective_token` starts its hashed text
+with, so an `OverlayAnnotator`'s token matches sdmxlib's exactly (below).
 
 With an empty fingerprint, `effective_token` equals `token`, and the ETags
 match a service with no annotator.
@@ -60,15 +63,23 @@ structure or data. sdmxlib's
 from sdmxlib_rest.overlays import OverlayAnnotator
 
 annotator = OverlayAnnotator.from_files(["overlays/display.json"])
-runtime = CatalogRuntime(BundleProvider("path/to/bundle"), message_annotator=annotator)
+runtime = CatalogRuntime(BundleProvider("path/to/bundle/<token>"), message_annotator=annotator)
 ```
 
-`merge=` sets, per annotation type, how a `set` entry combines with the
-annotations already present; the default replaces them.
+`merge=` maps an annotation type to a `sdmxlib.bundle.MergeHook`, which
+decides how a `set` entry combines with the annotations already present; the
+default replaces them. A hook carries a package, a name and a version, and the
+token covers them, so bump the version whenever the hook's output changes.
 
-Its fingerprint is the overlays' digests, one per line in apply order, so
-`effective_token` equals sdmxlib's `effective_token(manifest, overlays)`. A
-tool that computes the token with sdmxlib predicts the service's ETag.
+`audience=` applies the entries scoped to that audience and the unscoped ones;
+without it every entry applies. An overlay that changes a name or description
+(`texts`, overlay format 1.2) is refused with `OverlayError` when it is set:
+sdmxlib applies those only with `fold_overlays`, into a new publication.
+
+Its fingerprint is the hooks line and the overlays' digests as applied to the
+audience, one per line in apply order, so `effective_token` equals sdmxlib's
+`effective_token(manifest, overlays, merge=..., audience=...)`. A tool that
+computes the token with sdmxlib predicts the service's ETag.
 
 To change overlays on a running service, call `replace`, from an admin
 endpoint or a file watcher the consumer owns:
@@ -87,4 +98,4 @@ Each request the structure cache does not answer copies every artefact an
 overlay entry selects. A `*` selector, or one naming a class, that reaches
 the codes of a very large codelist pays that copy on each such request. Keep
 selectors specific, or fold a settled overlay into the bundle with
-`sdmxlib.bundle.fold_overlays` and republish.
+`sdmxlib.bundle.fold_overlays`, which writes a new publication.

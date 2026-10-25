@@ -46,7 +46,7 @@ class MessageAnnotator(Protocol):
         self,
         message: StructureMessage,
         *,
-        registry: sl.LocalRegistry,
+        registry: sl.BundleRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -93,7 +93,7 @@ class CompositeMessageAnnotator:
         self,
         message: StructureMessage,
         *,
-        registry: sl.LocalRegistry,
+        registry: sl.BundleRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -115,7 +115,7 @@ class NullMessageAnnotator:
         self,
         message: StructureMessage,
         *,
-        registry: sl.LocalRegistry,  # noqa: ARG002
+        registry: sl.BundleRegistry,  # noqa: ARG002
         conn: duckdb.DuckDBPyConnection,  # noqa: ARG002
         token: str,  # noqa: ARG002
     ) -> StructureMessage:

@@ -26,11 +26,11 @@ classifiers = [
 # service it was extracted from: no statcatlib (the catalog is reached through
 # the CatalogProvider seam), no uvicorn (serving is the consumer's job).
 dependencies = [
-    # 0.71 refuses a store on another schema instead of emptying it
-    # (StatCat-Suite/sdmxlib#57), and 0.72 reads `bundle.manifest.json`, whose
-    # token is the cache key. Capped at the next minor while sdmxlib is
-    # pre-1.0, where a minor may break.
-    "sdmxlib>=0.72,<0.73",
+    # 0.73 opens a publication read-only as `BundleRegistry` and takes a
+    # `MergeHook` per annotation type; 0.74 reads the DuckDB storage version
+    # from each file's header (StatCat-Suite/sdmxlib#174). Capped at the next
+    # minor while sdmxlib is pre-1.0, where a minor may break.
+    "sdmxlib>=0.74,<0.75",
     "attrs>=24",
     # 0.133 is the first FastAPI that lets Starlette past 1.0.
     "fastapi>=0.133",

@@ -7,7 +7,7 @@ assembles.
 ## The provider
 
 `CatalogProvider` has one method, `open`, which returns an `OpenedCatalog`.
-This provider opens a published bundle with sdmxlib:
+This provider opens a publication of a bundle with sdmxlib:
 
 ```python
 import sdmxlib as sl
@@ -15,11 +15,11 @@ from sdmxlib_rest.provider import OpenedCatalog
 
 
 class BundleProvider:
-    def __init__(self, path: str) -> None:
-        self._path = path
+    def __init__(self, publication: str) -> None:
+        self._publication = publication
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._path, require_manifest=True)
+        registry = sl.LocalRegistry.bundle(self._publication)
         return OpenedCatalog(
             registry=registry,
             meta_conn=registry.connection,
@@ -27,10 +27,13 @@ class BundleProvider:
         )
 ```
 
-`require_manifest=True` refuses a directory that was never published. A
-published bundle's manifest carries a `token`, minted at each publication,
-which every cache and the ETag key on. sdmxlib refuses a bundle built on a
-store schema it does not read with `StoreSchemaError`.
+A bundle is a directory of publications, `<bundle>/<token>/`, over the
+`data/` they share, and the provider opens one publication.
+`LocalRegistry.bundle` opens it read-only and returns an `sl.BundleRegistry`,
+so any number of processes can serve the same publication. It refuses a
+directory without `bundle.manifest.json` with `ManifestError`, and a store
+schema it does not read with `StoreSchemaError`. The manifest's `token`, the
+publication's directory name, is what every cache and the ETag key on.
 
 **The registry must reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
@@ -49,7 +52,7 @@ which overrides the manifest's token when a provider keys on something else.
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.runtime import CatalogRuntime
 
-runtime = CatalogRuntime(BundleProvider("path/to/bundle"))
+runtime = CatalogRuntime(BundleProvider("path/to/bundle/<token>"))
 app = create_app(
     runtime,
     RestSettings(title="my-sdmx-api", version="1.0.0"),
