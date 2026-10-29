@@ -107,6 +107,9 @@ strict = true
 # A warning that cannot fail is a warning nobody reads. Keep this list empty;
 # an ignore list is where it decays.
 filterwarnings = ["error"]
+# pytest-asyncio warns at configure time while this is unset, and from pytest
+# 9.2 that warning runs under `filterwarnings` and aborts the session.
+asyncio_default_fixture_loop_scope = "function"
 markers = [
   "unit: fast unit tests (no I/O)",
   "bundle: benchmarks against a real bundle (set SDMXLIB_REST_BENCH_BUNDLE); skipped without one",
