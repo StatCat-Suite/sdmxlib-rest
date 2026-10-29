@@ -156,7 +156,7 @@ def _distinct(query: sl.ObsQuery, component_id: str) -> frozenset[str]:
     return frozenset(str(v) for v in frame.to_series() if v is not None)
 
 
-def _observations(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.ObsQuery:
+def _observations(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.ObsQuery:
     """The flow's observations, or a 500 naming why they cannot be read.
 
     sdmxlib refuses a series-attributes sidecar with more than one row per join
@@ -170,7 +170,7 @@ def _observations(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow])
         raise HTTPException(status_code=500, detail=f"cannot answer availability for {flow_urn}: {exc}") from exc
 
 
-def _time_dimension_id(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str:
+def _time_dimension_id(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str:
     """The DSD's time dimension, which ``startPeriod`` / ``endPeriod`` bound."""
     dsd = registry.dsd(flow_urn)
     time_dimension = dsd.time_dimension if dsd is not None else None
@@ -261,7 +261,7 @@ _STRUCTURE_200_CONTENT: dict[int | str, dict[str, Any]] = {
 )
 async def get_availability(  # noqa: C901, PLR0912, PLR0915
     request: Request,
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     token: Annotated[str, Depends(get_token)],
     availability_values: Annotated[AvailabilityValues, Depends(get_availability_values)],

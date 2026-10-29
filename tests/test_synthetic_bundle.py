@@ -1,9 +1,9 @@
 """The library routes, served from a published bundle the way a consumer opens one.
 
-`conftest.py`'s world is a bundle assembled by hand and opened unpublished.
-This one is built by `sdmxlib.testing.synthetic_bundle`, published with a
-manifest, and opened with `LocalRegistry.bundle(require_manifest=True)`: the
-path a consumer's provider takes. It has what the hand-built world lacks — a
+`conftest.py`'s world is a bundle assembled by hand. This one is built and
+published by `sdmxlib.testing.synthetic_bundle` and opened with
+`LocalRegistry.bundle`: the path a consumer's provider takes. It has what the
+hand-built world lacks — a
 hierarchical codelist, names in two languages, an observation attribute,
 annotated codes — and it needs no real bundle, so it runs everywhere.
 
@@ -53,13 +53,13 @@ _SHAPE = Shape(
 
 
 class _PublishedBundleProvider:
-    """Opens a bundle the way a consumer's provider does: manifest required."""
+    """Opens a publication the way a consumer's provider does."""
 
-    def __init__(self, root: Path) -> None:
-        self._root = root
+    def __init__(self, publication: Path) -> None:
+        self._publication = publication
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._root, require_manifest=True)
+        registry = sl.LocalRegistry.bundle(self._publication)
         manifest = registry.manifest
         assert manifest is not None
         return OpenedCatalog(
@@ -74,24 +74,24 @@ class _PublishedBundleProvider:
 @pytest.fixture(scope="module")
 def published(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Manifest]:
     root = tmp_path_factory.mktemp("synthetic") / "bundle"
-    return root, synthetic_bundle(root, _SHAPE, seed=7)
+    manifest = synthetic_bundle(root, _SHAPE, seed=7)
+    return root / manifest.token, manifest
 
 
 @pytest.fixture(scope="module")
 def observations(published: tuple[Path, Manifest]) -> pl.DataFrame:
     """Every observation, read through sdmxlib's DSL: the oracle for /availability."""
-    root, _ = published
-    with sl.LocalRegistry.bundle(root) as registry:
+    publication, _ = published
+    with sl.LocalRegistry.bundle(publication) as registry:
         return registry.obs(_FLOW).frame()
 
 
 @pytest.fixture(scope="module")
 def runtime(published: tuple[Path, Manifest], observations: pl.DataFrame) -> Iterator[CatalogRuntime]:
-    # `observations` first: it opens and closes the bundle on its own, and
-    # DuckDB's lock on `meta.duckdb` is exclusive.
+    # `observations` first, so the oracle reads the bundle before the app does.
     del observations
-    root, _ = published
-    runtime = CatalogRuntime(_PublishedBundleProvider(root))
+    publication, _ = published
+    runtime = CatalogRuntime(_PublishedBundleProvider(publication))
     yield runtime
     runtime.close()
 

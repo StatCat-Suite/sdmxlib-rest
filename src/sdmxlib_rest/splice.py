@@ -44,7 +44,7 @@ class SpliceContext:
     consumer sub-apps can vary splice behaviour without new context fields.
     """
 
-    registry: sl.LocalRegistry
+    registry: sl.BundleRegistry
     conn: duckdb.DuckDBPyConnection
     # The runtime's `effective_token`, so a splice that caches keys on
     # annotation changes as well as publications.

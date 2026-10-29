@@ -29,7 +29,7 @@ from sdmxlib_rest.message_annotator import (
 )
 from sdmxlib_rest.runtime import CatalogRuntime
 from sdmxlib_rest.structure_cache import NullStructureCache
-from tests.conftest import BUILD_ID, _WorldProvider
+from tests.conftest import _WorldProvider
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -60,7 +60,7 @@ class _Overlay:
         self,
         message: StructureMessage,
         *,
-        registry: sl.LocalRegistry,
+        registry: sl.BundleRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -82,7 +82,7 @@ class _Plain:
         self,
         message: StructureMessage,
         *,
-        registry: sl.LocalRegistry,
+        registry: sl.BundleRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -181,13 +181,13 @@ def test_a_fingerprint_change_misses_the_structure_cache(client: TestClient, ove
     assert third != first
 
 
-def test_the_annotator_is_handed_the_bare_token(client: TestClient, overlay: _Overlay) -> None:
+def test_the_annotator_is_handed_the_bare_token(client: TestClient, world: World, overlay: _Overlay) -> None:
     """It memoises per publication; folding its own fingerprint in would defeat that."""
     client.get(_FLOW)
     overlay.version = "v2"
     client.get(_FLOW)
 
-    assert overlay.applied == [BUILD_ID, BUILD_ID]
+    assert overlay.applied == [world.manifest.token, world.manifest.token]
 
 
 def test_availability_keys_ignore_the_fingerprint(world: World, overlay: _Overlay) -> None:
@@ -198,7 +198,7 @@ def test_availability_keys_ignore_the_fingerprint(world: World, overlay: _Overla
         overlay.version = "v2"
         client.get(_AVAILABILITY)
 
-    assert values.tokens == [BUILD_ID, BUILD_ID]
+    assert values.tokens == [world.manifest.token, world.manifest.token]
 
 
 def test_last_modified_moves_with_the_fingerprint(client: TestClient, overlay: _Overlay) -> None:
@@ -226,7 +226,7 @@ def test_no_fingerprint_keys_exactly_as_before(world: World) -> None:
 
     assert plain.headers["etag"] == default.headers["etag"]
     assert plain.headers["last-modified"] == default.headers["last-modified"]
-    assert plain.headers["last-modified"] == "Thu, 01 Jan 2026 00:00:00 GMT"
+    assert parsedate_to_datetime(plain.headers["last-modified"]) == world.manifest.created_at.replace(microsecond=0)
 
 
 def test_the_effective_token_is_the_token_until_there_is_a_fingerprint(world: World, overlay: _Overlay) -> None:
@@ -235,8 +235,8 @@ def test_the_effective_token_is_the_token_until_there_is_a_fingerprint(world: Wo
     fingerprinted = _runtime(world, overlay)
     fingerprinted.ensure_open()
 
-    assert plain.effective_token == plain.token == BUILD_ID
-    assert fingerprinted.effective_token not in {"", BUILD_ID}
+    assert plain.effective_token == plain.token == world.manifest.token
+    assert fingerprinted.effective_token not in {"", world.manifest.token}
 
 
 def test_a_composite_joins_its_members_fingerprints(overlay: _Overlay) -> None:

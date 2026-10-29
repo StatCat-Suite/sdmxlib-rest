@@ -360,7 +360,7 @@ async def get_structure(
             openapi_examples=_VERSION_EXAMPLES,
         ),
     ],
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     token: Annotated[str, Depends(get_token)],
     effective_token: Annotated[str, Depends(get_effective_token)],
@@ -611,7 +611,7 @@ async def get_structure_item(
             },
         ),
     ],
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     asof: AsOf = None,
     accept: Annotated[str | None, Header()] = None,
     accept_language: Annotated[str | None, Header(alias="Accept-Language")] = None,
@@ -779,7 +779,7 @@ def _resolve_extras(
     artefact: object,
     references: str,
     detail: _Detail | str,
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
 ) -> list[object]:
     """Dispatch `references` to the right walker, then shape extras per `detail`.
 
@@ -826,7 +826,7 @@ def _resolve_extras(
 
 def _resolve_dataflows_referencing_scheme(
     scheme: sl.CategoryScheme,
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
 ) -> list[object]:
     """Return every Dataflow the scheme's categorisations point to.
 
@@ -864,7 +864,7 @@ def _resolve_dataflows_referencing_scheme(
     return out
 
 
-def _resolve_children(artefact: object, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
+def _resolve_children(artefact: object, registry: sl.BundleRegistry, shape: _Shape) -> list[object]:
     """Resolve the artefacts that ``references=children`` should inline.
 
     For a Dataflow we return the full transitive set the consumer needs to
@@ -893,7 +893,7 @@ def _resolve_children(artefact: object, registry: sl.LocalRegistry, shape: _Shap
     return []
 
 
-def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
+def _resolve_parents_and_siblings(artefact: object, registry: sl.BundleRegistry, shape: _Shape) -> list[object]:
     """Resolve `references=parents` / `parentsandsiblings`.
 
     Strict SDMX-REST defines "parents" of a Dataflow as the Categorisations
@@ -929,7 +929,7 @@ def _resolve_parents_and_siblings(artefact: object, registry: sl.LocalRegistry, 
 
 def _walk_descendants(
     artefact: object,
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     shape: _Shape,
 ) -> list[object]:
     """Walk the artefact's reference graph, shaping each ref with ``shape``.
@@ -960,7 +960,7 @@ def _walk_descendants(
     return refs
 
 
-def _walk_dataflow_categorisations(dataflow: sl.Dataflow, registry: sl.LocalRegistry) -> list[object]:
+def _walk_dataflow_categorisations(dataflow: sl.Dataflow, registry: sl.BundleRegistry) -> list[object]:
     """Return every Categorisation for this dataflow plus each target CategoryScheme (pruned).
 
     Walks the registry for Categorisations whose source URN is this
@@ -998,7 +998,7 @@ def _walk_dataflow_categorisations(dataflow: sl.Dataflow, registry: sl.LocalRegi
     return out
 
 
-def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.LocalRegistry, shape: _Shape) -> list[object]:
+def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.BundleRegistry, shape: _Shape) -> list[object]:
     """Codelists + ConceptSchemes + HierarchyAssociations + Hierarchies referenced by ``dsd``, shaped.
 
     ``DSD.all_codelists`` gives every codelist referenced by a component's
@@ -1035,7 +1035,7 @@ def _walk_dsd_outbound_refs(dsd: sl.DataStructure, registry: sl.LocalRegistry, s
 
 def _append_hierarchy_associations_for_dsd(
     dsd: sl.DataStructure,
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     refs: list[object],
     seen: set[str],
     shape: _Shape,
@@ -1097,7 +1097,7 @@ def _concept_scheme_urns_for_dsd(dsd: sl.DataStructure) -> list[sl.SdmxUrn[sl.Co
 
 def _resolve_dsd_for_ref_walk(
     artefact: object,
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     refs: list[object],
     shape: _Shape,
 ) -> sl.DataStructure | None:
@@ -1116,7 +1116,7 @@ def _resolve_dsd_for_ref_walk(
 
 def _append_by_urn(
     urn: sl.SdmxUrn[object],
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     refs: list[object],
     seen: set[str],
     shape: _Shape,
@@ -1155,7 +1155,7 @@ def _version_key(version: str) -> tuple[int, ...]:
 
 
 def _resolve_latest(
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     cls: type[sl.MaintainableArtefact],
     *,
     agency: str,
@@ -1178,7 +1178,7 @@ def _resolve_latest(
 
 
 def _enumerate_with_wildcards(  # noqa: C901
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     cls: type[sl.MaintainableArtefact],
     *,
     agency: str,

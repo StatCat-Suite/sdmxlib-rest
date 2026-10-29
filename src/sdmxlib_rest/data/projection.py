@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 # on a new build in the same process (a consumer's catalog may be), and a flow URN alone
 # would then keep answering with the previous build's dimension order. Weak, so
 # the entries go with the registry they describe.
-_KEY_DIM_IDS_CACHE: weakref.WeakKeyDictionary[sl.LocalRegistry, dict[str, list[str]]] = weakref.WeakKeyDictionary()
+_KEY_DIM_IDS_CACHE: weakref.WeakKeyDictionary[sl.BundleRegistry, dict[str, list[str]]] = weakref.WeakKeyDictionary()
 
 
 def resolve_projection_set(
@@ -142,7 +142,7 @@ def project_arrow_batches(
         yield batch.select(present)
 
 
-def materialise_dsd_for_flow(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.DataStructure | None:
+def materialise_dsd_for_flow(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.DataStructure | None:
     """Resolve ``flow_urn`` to its bound DSD, materialised.
 
     sdmxlib's SDMX-JSON writers need the DSD object (not just a URN) to pull
@@ -160,7 +160,7 @@ def materialise_dsd_for_flow(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl
 
 
 def key_dimension_ids(
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     flow_urn: sl.SdmxUrn[sl.Dataflow],
     binding: sl.DataflowBinding,
 ) -> list[str]:
@@ -214,7 +214,7 @@ def key_dimension_ids(
 
 
 def label_maps_for_dims(
-    registry: sl.LocalRegistry,
+    registry: sl.BundleRegistry,
     dim_codelist_urns: dict[str, sl.SdmxUrn[sl.Codelist]],
     binding: sl.DataflowBinding,
     lang: str,

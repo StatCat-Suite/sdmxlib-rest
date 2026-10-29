@@ -1,4 +1,4 @@
-"""sdmxlib-rest — generic SDMX-REST HTTP surface over a sdmxlib ``LocalRegistry``.
+"""sdmxlib-rest — generic SDMX-REST HTTP surface over a sdmxlib ``BundleRegistry``.
 
 It owns the generic
 HTTP shape of SDMX-REST — URLs, content negotiation, streaming, and

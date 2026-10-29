@@ -206,7 +206,7 @@ async def get_metadataset(
         str,
         Path(description="Version.", pattern=_VERSION_PATTERN, openapi_examples=_VERSION_EXAMPLES),
     ],
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     asof: AsOf = None,
     accept: Annotated[str | None, Header()] = None,
     accept_language: Annotated[str | None, Header(alias="Accept-Language")] = None,
@@ -276,7 +276,7 @@ async def get_metadataflow_sets(
             openapi_examples=_PROVIDER_ID_EXAMPLES,
         ),
     ],
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     store: Annotated[MetadataStore, Depends(get_metadata_store)],
     detail: Annotated[
@@ -364,7 +364,7 @@ async def get_structure_attached_sets(
         str,
         Path(pattern=_VERSION_PATTERN, openapi_examples=_VERSION_EXAMPLES),
     ],
-    registry: Annotated[sl.LocalRegistry, Depends(get_registry)],
+    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     store: Annotated[MetadataStore, Depends(get_metadata_store)],
     detail: Annotated[

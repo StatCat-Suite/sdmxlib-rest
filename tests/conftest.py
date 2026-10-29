@@ -16,12 +16,14 @@ a Protocol — so an in-memory registry 500s on every ``all`` route. The DuckDB
 registry is also what production runs and what returns the ``Lazy*`` wrappers
 the stub fast path is built around, so the tests exercise the real shapes.
 
-**A real bundle: ``meta.duckdb`` + ``lake.ducklake`` + ``parquet/``.**
-``/availability`` asks sdmxlib's query DSL for its answers (#6), and the DSL
-reads observations through the registry's own data plane, which ATTACHes the
-lake when something first asks for rows. A ``lake`` schema created on a side
-connection is invisible to it, so the fixture is the layout every consumer
-actually serves, opened with `LocalRegistry.bundle`.
+**A real, published bundle.** ``/availability`` asks sdmxlib's query DSL for
+its answers (#6), and the DSL reads observations through the registry's own
+data plane, which ATTACHes the lake when something first asks for rows. A
+``lake`` schema created on a side connection is invisible to it, so the
+fixture is the layout every consumer serves: a publication directory
+(``meta.duckdb``, ``lake.ducklake``, ``bundle.manifest.json``) over the
+bundle's shared ``data/``, built with `LocalRegistry.build`, published with
+``write_manifest`` and opened read-only with `LocalRegistry.bundle`.
 
 The world is deliberately small but not degenerate: two codelists, a DSD with
 two coded dimensions plus a time dimension, a dataflow, a binding that renames
@@ -32,6 +34,7 @@ whose SDMX ids and column names coincide would hide every id/column confusion.
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,6 +44,7 @@ import pytest
 import sdmxlib as sl
 from attrs import define
 from fastapi.testclient import TestClient
+from sdmxlib.bundle import Manifest, Producer, write_manifest
 
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.provider import OpenedCatalog
@@ -67,15 +71,23 @@ class World:
     """The fixture catalog plus the handles a test needs to assert against it.
 
     Attributes:
-        registry: The registry the app serves — structural, bindings and data.
+        registry: The published bundle the app serves, read-only — structural,
+            bindings and data.
         conn: The registry's own connection, handed to the routes as the meta
             connection. The lake is attached to it lazily, on first observation query.
         flow_urn: URN of the one dataflow, the subject of most route tests.
     """
 
-    registry: sl.LocalRegistry
+    registry: sl.BundleRegistry
     conn: duckdb.DuckDBPyConnection
     flow_urn: sl.SdmxUrn[sl.Dataflow]
+
+    @property
+    def manifest(self) -> Manifest:
+        """The publication's manifest; its token is what the runtime keys on."""
+        manifest = self.registry.manifest
+        assert manifest is not None
+        return manifest
 
 
 def _codelists(registry: sl.LocalRegistry) -> None:
@@ -192,7 +204,7 @@ def _binding(registry: sl.LocalRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> N
             dimension_column_map={"REF_AREA": "geo", "SEX": "sex", "TIME_PERIOD": "period"},
             measure_column_map={"OBS_VALUE": "val"},
             attribute_column_map={},
-            structural_version="1.0",
+            structural_version="AG:DSD_POP(1.0)",
             source_registry="test",
             materialized_at=dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
             bound_at=dt.datetime(2026, 1, 1, tzinfo=dt.UTC),
@@ -211,17 +223,18 @@ def _observations(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("INSERT INTO lake.obs VALUES ('CA','M','2020',1.0),('CA','F','2020',2.0),('US','M','2021',3.0)")
 
 
-def _lake(root: Path, extra: Callable[[duckdb.DuckDBPyConnection], None] | None) -> None:
-    """Write the bundle's DuckLake catalog and parquet before the registry opens it.
+def _lake(publication: Path, extra: Callable[[duckdb.DuckDBPyConnection], None] | None) -> None:
+    """Write the publication's DuckLake catalog, and its data files into the bundle's ``data/``.
 
-    Written on a connection of its own and closed again, because the registry
-    attaches the same catalog itself; ``extra`` lets a test add tables of its
-    own (a sidecar, say) while the lake is still writable here.
+    Written on a connection of its own after the builder closes and before
+    ``write_manifest``, which inventories the lake. ``extra`` lets a test add
+    tables of its own (a sidecar, say) while the lake is still writable here.
     """
     conn = duckdb.connect()
     conn.execute("INSTALL ducklake")
     conn.execute("LOAD ducklake")
-    conn.execute(f"ATTACH 'ducklake:{root / 'lake.ducklake'}' AS lake (DATA_PATH '{root / 'parquet'}/')")
+    data = publication.parent / "data"
+    conn.execute(f"ATTACH 'ducklake:{publication / 'lake.ducklake'}' AS lake (DATA_PATH '{data}/')")
     _observations(conn)
     if extra is not None:
         extra(conn)
@@ -266,28 +279,84 @@ def _metadata(registry: sl.LocalRegistry) -> None:
     )
 
 
+@functools.cache
+def _publication(
+    extra_lake: Callable[[duckdb.DuckDBPyConnection], None] | None,
+    codelists: Callable[[sl.LocalRegistry], None] | None,
+    extra: Callable[[sl.LocalRegistry], None] | None,
+) -> Path:
+    """The world these hooks build, published once per process.
+
+    Publishing costs about a second (``write_manifest`` settles the lake and
+    fingerprints every artefact), and a published bundle opens read-only, so
+    every test asking for the same world opens its own registry over one
+    publication. The hooks are the cache key: pass the same function objects
+    for the same world.
+    """
+    world = _build(extra_lake, codelists, extra)
+    world.registry.close()
+    return world.registry.uri.parent
+
+
 def build_world(
     extra_lake: Callable[[duckdb.DuckDBPyConnection], None] | None = None,
     codelists: Callable[[sl.LocalRegistry], None] | None = None,
+    extra: Callable[[sl.LocalRegistry], None] | None = None,
+    *,
+    publish: bool = True,
 ) -> World:
-    """A populated catalog over a real bundle in a temp directory.
+    """A populated catalog over a published bundle in a temp directory.
+
+    A published world is built once per set of hooks and shared, read-only;
+    each call opens a new registry over it.
 
     Args:
-        extra_lake: Runs against the lake before the registry opens it, for a
-            test that needs tables beyond ``lake.obs``.
+        extra_lake: Runs against the lake before it is published, for a test
+            that needs tables beyond ``lake.obs``.
         codelists: Adds ``CL_GEO`` and ``CL_SEX`` in place of the default
             ones, for a test that needs richer codelists.
+        extra: Runs on the builder after the standard artefacts, for a test
+            that needs artefacts of its own. The served registry is
+            read-only, so a test adds them here.
+        publish: False serves the publication unpublished, reopened writable
+            with ``build(resume=)``, for content ``write_manifest`` refuses.
+            Built for the call, never shared.
+
+    Returns:
+        The world, its registry open.
     """
-    root = Path(tempfile.mkdtemp()) / "bundle"
-    root.mkdir()
-    _lake(root, extra_lake)
-    registry = sl.LocalRegistry.bundle(root)
-    (codelists or _codelists)(registry)
-    _concepts(registry)
-    _structure(registry)
-    _metadata(registry)
-    flow_urn = sl.Dataflow.urn_for(agency="AG", id="DF_POP", version="1.0")
-    _binding(registry, flow_urn)
+    if not publish:
+        return _build(extra_lake, codelists, extra, publish=False)
+    registry = sl.LocalRegistry.bundle(_publication(extra_lake, codelists, extra))
+    return World(registry=registry, conn=registry.connection, flow_urn=_FLOW)
+
+
+_FLOW = sl.Dataflow.urn_for(agency="AG", id="DF_POP", version="1.0")
+
+
+def _build(
+    extra_lake: Callable[[duckdb.DuckDBPyConnection], None] | None,
+    codelists: Callable[[sl.LocalRegistry], None] | None,
+    extra: Callable[[sl.LocalRegistry], None] | None,
+    *,
+    publish: bool = True,
+) -> World:
+    flow_urn = _FLOW
+    with sl.LocalRegistry.build(Path(tempfile.mkdtemp()) / "bundle") as builder:
+        (codelists or _codelists)(builder)
+        _concepts(builder)
+        _structure(builder)
+        _metadata(builder)
+        _binding(builder, flow_urn)
+        if extra is not None:
+            extra(builder)
+        publication = builder.publication
+    _lake(publication, extra_lake)
+    if not publish:
+        registry = sl.LocalRegistry.build(publication.parent, resume=publication.name)
+        return World(registry=registry, conn=registry.connection, flow_urn=flow_urn)
+    write_manifest(publication, bundle_id="test", producer=Producer(name="sdmxlib-rest tests", version="1"))
+    registry = sl.LocalRegistry.bundle(publication)
     return World(registry=registry, conn=registry.connection, flow_urn=flow_urn)
 
 

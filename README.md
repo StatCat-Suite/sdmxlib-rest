@@ -13,7 +13,7 @@
 > take that into account before adopting it.
 
 A generic [SDMX-REST](https://github.com/sdmx-twg/sdmx-rest) HTTP surface over a
-[sdmxlib](https://github.com/StatCat-Suite/sdmxlib) `LocalRegistry`.
+[sdmxlib](https://github.com/StatCat-Suite/sdmxlib) `BundleRegistry`.
 
 It owns the parts of an SDMX-REST service that are the same everywhere — URL
 grammar, content negotiation, localisation, streaming, response assembly — and
@@ -56,8 +56,8 @@ that recomputes more than it needs to.
 
 **The registry has to reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
-registry's own connection and attaches the lake there. Open a bundle with
-`LocalRegistry.bundle(path)`, or any opener that does the same (statcatlib's
+registry's own connection and attaches the lake there. Open a publication
+with `LocalRegistry.bundle(path)`, or any opener that does the same (statcatlib's
 `Catalog` does). The DSL sees only lakes attached to the registry's own
 connection. This holds since 0.6.0; earlier versions ran `/availability` SQL on
 `meta_conn`.

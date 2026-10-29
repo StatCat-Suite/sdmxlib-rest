@@ -85,7 +85,7 @@ class CatalogRuntime:
         return self._opened is not None
 
     @property
-    def registry(self) -> sl.LocalRegistry:
+    def registry(self) -> sl.BundleRegistry:
         """The registry (opening it if needed)."""
         return self.ensure_open().registry
 
@@ -135,15 +135,15 @@ class CatalogRuntime:
         What the structure cache, the splices and the ETag key on (GH-2). Equal
         to ``token`` while the annotator has no fingerprint, so ETags stay
         byte-identical for a consumer that never sets one. The folding mirrors
-        sdmxlib's ``effective_token`` for overlays: a sha256 over the token and
-        the fingerprint, one per line. `AvailabilityKey` keeps the bare
+        sdmxlib's ``effective_token`` for overlays: a sha256 over the lines
+        ``v2``, the token and the fingerprint. `AvailabilityKey` keeps the bare
         ``token``: annotations cannot change availability.
         """
         token = self.token
         fingerprint = annotator_fingerprint(self.message_annotator)
         if not token or not fingerprint:
             return token
-        return hashlib.sha256(f"{token}\n{fingerprint}".encode()).hexdigest()
+        return hashlib.sha256(f"v2\n{token}\n{fingerprint}".encode()).hexdigest()
 
     @property
     def last_modified(self) -> str:
@@ -215,7 +215,7 @@ def get_runtime(request: Request) -> CatalogRuntime:
     return runtime
 
 
-def get_registry(request: Request) -> sl.LocalRegistry:
+def get_registry(request: Request) -> sl.BundleRegistry:
     """FastAPI dependency: the process/app-wide registry."""
     return get_runtime(request).registry
 

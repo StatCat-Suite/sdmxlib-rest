@@ -46,7 +46,7 @@ class FilterContext:
     like ``within[DIM]`` rely on.
     """
 
-    registry: sl.LocalRegistry
+    registry: sl.BundleRegistry
     conn: duckdb.DuckDBPyConnection
     flow_urn: sl.SdmxUrn[sl.Dataflow]
     binding: sl.DataflowBinding

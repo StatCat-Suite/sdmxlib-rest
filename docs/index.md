@@ -1,7 +1,7 @@
 # sdmxlib-rest
 
 sdmxlib-rest serves an [sdmxlib](https://statcat-suite.github.io/sdmxlib/)
-`LocalRegistry` over [SDMX-REST 2.2.2](https://github.com/sdmx-twg/sdmx-rest).
+`BundleRegistry` over [SDMX-REST 2.2.2](https://github.com/sdmx-twg/sdmx-rest).
 It owns the parts of an SDMX-REST service that every catalog shares: the URL
 grammar, content negotiation, localisation, conditional GET, compression and
 response assembly. A consumer supplies how the registry is opened and,

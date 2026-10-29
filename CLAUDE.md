@@ -2,7 +2,7 @@
 
 ## What this is
 
-A generic SDMX-REST HTTP surface over a [sdmxlib](../sdmxlib) `LocalRegistry`.
+A generic SDMX-REST HTTP surface over a [sdmxlib](../sdmxlib) `BundleRegistry`.
 It owns the parts of an SDMX-REST service that are the same for every catalog —
 URL grammar, content negotiation, localisation, streaming, response assembly —
 and pushes everything catalog-specific behind explicit seams.
@@ -26,8 +26,9 @@ A default must be inert: a consumer installing none of the seams must get a
 All are Protocols carried on `CatalogRuntime` (`runtime.py`).
 
 `CatalogProvider` is the one seam that names a concrete type: it returns an
-`sl.LocalRegistry`, because `binding_for` — which every data-plane helper
-needs — exists only there and no sdmxlib Protocol covers it.
+`sl.BundleRegistry`, the read-only registry `LocalRegistry.bundle` opens,
+because `binding_for` — which every data-plane helper needs — exists only
+there and no sdmxlib Protocol covers it.
 
 | Seam | File | Default |
 |---|---|---|
@@ -236,7 +237,7 @@ a major. `just release-1-preview` through `release-5-pypi`: a release is a
 to PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
 
 Every suite library is pre-1.0, so a minor bump may break. `pyproject.toml`
-caps each suite dependency below its next minor (`sdmxlib>=0.72,<0.73`); the
+caps each suite dependency below its next minor (`sdmxlib>=0.74,<0.75`); the
 PR that adopts a new sdmxlib minor raises the cap.
 
 ## Docs site
@@ -250,6 +251,6 @@ updates the page that describes it.
 
 ## Related repos
 
-- `../sdmxlib` — the domain model and `LocalRegistry` this sits on top of.
+- `../sdmxlib` — the domain model and `BundleRegistry` this sits on top of.
 - `../statcatlib` (formerly pinax) — `Catalog` bundle format a consumer's
   provider may open. sdmxlib-rest must never depend on it.

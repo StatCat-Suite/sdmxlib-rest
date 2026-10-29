@@ -15,7 +15,16 @@ import msgspec
 import pytest
 import sdmxlib as sl
 from fastapi.testclient import TestClient
-from sdmxlib.bundle import OVERLAY_FORMAT, Overlay, OverlayAnnotation, OverlayEntry, OverlayError, effective_token
+from sdmxlib.bundle import (
+    OVERLAY_FORMAT,
+    MergeHook,
+    Overlay,
+    OverlayAnnotation,
+    OverlayEntry,
+    OverlayError,
+    OverlayText,
+    effective_token,
+)
 from sdmxlib.testing import Dim, Shape, synthetic_bundle
 
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
@@ -38,14 +47,25 @@ _GEO = "/structure/codelist/AG/CL_GEO/1.0"
 _XML = {"Accept": "application/vnd.sdmx.structure+xml;version=3.0"}
 
 
-def _overlay(title: str, *, selector: str = "AG:CL_GEO", overlay_id: str = "display") -> Overlay:
+def _overlay(
+    title: str, *, selector: str = "AG:CL_GEO", overlay_id: str = "display", scope: str | None = None
+) -> Overlay:
     return Overlay(
         format_version=OVERLAY_FORMAT,
         id=overlay_id,
         entries=(
-            OverlayEntry(selector=selector, op="set", type="LAYOUT_ROW", annotation=OverlayAnnotation(title=title)),
+            OverlayEntry(
+                selector=selector, op="set", type="LAYOUT_ROW", annotation=OverlayAnnotation(title=title), scope=scope
+            ),
         ),
     )
+
+
+def _append(existing: list[sl.Annotation], new: sl.Annotation) -> list[sl.Annotation]:
+    return [*existing, new]
+
+
+_APPEND = MergeHook(package="tests", name="append", version="1", fn=_append)
 
 
 def _titles(annotated: dict[str, Any], annotation_type: str) -> list[str]:
@@ -133,24 +153,63 @@ def test_from_files_refuses_a_document_that_is_not_an_overlay(tmp_path: Path) ->
         OverlayAnnotator.from_files([path])
 
 
+def test_an_audience_applies_its_own_entries_and_the_unscoped_ones(world: World) -> None:
+    overlays = (
+        _overlay("everyone", overlay_id="all"),
+        _overlay("public", overlay_id="pub", scope="public"),
+        _overlay("internal", overlay_id="int", scope="internal"),
+    )
+    with _app(world, OverlayAnnotator(overlays=overlays, merge={"LAYOUT_ROW": _APPEND}, audience="public")) as client:
+        codelist = client.get(_GEO).json()["data"]["codelists"][0]
+
+    assert _titles(codelist, "LAYOUT_ROW") == ["everyone", "public"]
+
+
+def test_an_overlay_that_changes_a_name_is_refused() -> None:
+    """sdmxlib applies name and description texts only in fold_overlays, into a new publication."""
+    renamed = Overlay(
+        format_version=OVERLAY_FORMAT,
+        id="rename",
+        entries=(),
+        texts=(OverlayText(selector="AG:CL_GEO", op="set", field="name", lang="en", text="Regions"),),
+    )
+    with pytest.raises(OverlayError, match="fold_overlays"):
+        OverlayAnnotator(overlays=(renamed,))
+    annotator = OverlayAnnotator(overlays=(_overlay("kept"),))
+    with pytest.raises(OverlayError, match="fold_overlays"):
+        annotator.replace([renamed])
+    assert [o.id for o in annotator.overlays] == ["display"]
+
+
 class _Published:
-    def __init__(self, root: Path) -> None:
-        self._root = root
+    def __init__(self, publication: Path) -> None:
+        self._publication = publication
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._root, require_manifest=True)
+        registry = sl.LocalRegistry.bundle(self._publication)
         return OpenedCatalog(registry=registry, meta_conn=registry.connection, on_close=registry.close)
 
 
-def test_the_runtime_keys_on_sdmxlibs_effective_token(tmp_path: Path) -> None:
-    """The same key sdmxlib defines for a bundle with overlays, to the character."""
+@pytest.mark.parametrize(
+    ("merge", "audience"),
+    [(None, None), ({"LAYOUT_ROW": _APPEND}, None), (None, "public"), ({"LAYOUT_ROW": _APPEND}, "public")],
+    ids=["default", "hook", "audience", "hook-and-audience"],
+)
+def test_the_runtime_keys_on_sdmxlibs_effective_token(
+    tmp_path: Path, merge: dict[str, MergeHook] | None, audience: str | None
+) -> None:
+    """The same key sdmxlib defines for a bundle with overlays, hooks and an audience, to the character."""
     root = tmp_path / "bundle"
     manifest = synthetic_bundle(root, Shape(dimensions=(Dim(codes=4),), observations=8, periods=2))
-    overlays = (_overlay("a", selector="*", overlay_id="one"), _overlay("b", selector="Codelist", overlay_id="two"))
-    runtime = CatalogRuntime(_Published(root), message_annotator=OverlayAnnotator(overlays=overlays))
+    overlays = (
+        _overlay("a", selector="*", overlay_id="one"),
+        _overlay("b", selector="Codelist", overlay_id="two", scope="public"),
+    )
+    annotator = OverlayAnnotator(overlays=overlays, merge=merge, audience=audience)
+    runtime = CatalogRuntime(_Published(root / manifest.token), message_annotator=annotator)
     runtime.ensure_open()
     try:
         assert runtime.token == manifest.token
-        assert runtime.effective_token == effective_token(manifest, overlays)
+        assert runtime.effective_token == effective_token(manifest, overlays, merge=merge, audience=audience)
     finally:
         runtime.close()

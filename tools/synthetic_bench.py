@@ -130,24 +130,35 @@ def resolve_shape(name: str) -> Path:
     raise FileNotFoundError(msg)
 
 
-def build(shape_file: Path, out: Path, seed: int) -> bool:
-    """Build the synthetic bundle into `out`; return False when one is already there.
+def build(shape_file: Path, out: Path, seed: int) -> tuple[Path, bool]:
+    """Build the synthetic bundle into `out`, or reuse the one already there.
+
+    Args:
+        shape_file: The shape to build.
+        out: The bundle directory.
+        seed: The seed `synthetic_bundle` draws from.
+
+    Returns:
+        The publication directory, which `just bench` opens, and whether this
+        call built it.
 
     Raises:
         FileExistsError: If `out` holds anything but this shape and seed's bundle.
     """
-    stamp = {"shape": json.loads(shape_file.read_text(encoding="utf-8")), "seed": seed}
+    wanted = {"shape": json.loads(shape_file.read_text(encoding="utf-8")), "seed": seed}
     stamp_path = out / _STAMP
     if stamp_path.is_file():
-        if json.loads(stamp_path.read_text(encoding="utf-8")) == stamp:
-            return False
+        stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+        token = stamp.pop("token", None)
+        if stamp == wanted and token is not None and (out / token).is_dir():
+            return out / token, False
         shutil.rmtree(out)
     elif out.exists() and any(out.iterdir()):
         msg = f"{out} is not empty and was not built by this tool"
         raise FileExistsError(msg)
-    synthetic_bundle(out, shape_from_json(stamp["shape"]), seed=seed)
-    stamp_path.write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
-    return True
+    manifest = synthetic_bundle(out, shape_from_json(wanted["shape"]), seed=seed)
+    stamp_path.write_text(json.dumps({**wanted, "token": manifest.token}, indent=2) + "\n", encoding="utf-8")
+    return out / manifest.token, True
 
 
 def profile(bundle: Path, flow: str, name: str) -> Path:
@@ -176,11 +187,14 @@ def main() -> int:
     if args.command == "build":
         shape_file = resolve_shape(args.shape)
         started = time.perf_counter()
-        if build(shape_file, args.out, args.seed):
+        publication, built = build(shape_file, args.out, args.seed)
+        # The publication path alone on stdout, for `just bench-synthetic` to pass on.
+        if built:
             elapsed = time.perf_counter() - started
-            print(f"built {args.out} from {shape_file.name}, seed {args.seed}, in {elapsed:.1f} s")
+            print(f"built {args.out} from {shape_file.name}, seed {args.seed}, in {elapsed:.1f} s", file=sys.stderr)
         else:
-            print(f"reusing {args.out} ({shape_file.name}, seed {args.seed})")
+            print(f"reusing {args.out} ({shape_file.name}, seed {args.seed})", file=sys.stderr)
+        print(publication)
         return 0
     path = profile(args.bundle, args.flow, args.name)
     print(f"wrote {path} (gitignored: it describes a real bundle)")
