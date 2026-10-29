@@ -7,11 +7,12 @@ same semantic ("you asked, nothing matched"), but strict clients
 differentiate the two so that a "no match" doesn't have to be inferred
 from a non-error body's shape.
 
-We apply this to JSON structure / metadata / availability responses
-post-serialise — same splice pattern as the URN / HIER_CONTEXT
-injections. The check is "every artefact collection in
-``response.data`` is absent or empty" and (for availability) the
-constraint envelope's ``keyValues`` are all empty.
+We apply this to JSON structure and metadata responses post-serialise —
+same splice pattern as the URN / HIER_CONTEXT injections. The check is
+"every artefact collection in ``response.data`` is absent or empty".
+It never reads a constraint's ``keyValues``, and `/availability` does
+not call it. `/availability` gets its 204 from `render_availability`,
+which returns one before serialising when ``obs_count == 0``.
 
 XML responses, CSV / parquet streams, and the dedicated debug-output
 shapes are left at 200 — they have their own emptiness conventions

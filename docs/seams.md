@@ -22,8 +22,10 @@ Opens the registry. [Serving a bundle](serving.md#the-provider) covers it.
 ## `StructureCache`
 
 Caches rendered structure responses. The structure route asks `lookup` before
-it renders and offers the response to `store` after, for 2xx responses with a
-body.
+it renders and offers the SDMX-JSON response to `store` after. SDMX-ML
+responses are looked up and not yet stored, and an empty SDMX-JSON result is
+offered as its 204
+([GH-74](https://github.com/StatCat-Suite/sdmxlib-rest/issues/74)).
 
 ```python
 class StructureCache(Protocol):

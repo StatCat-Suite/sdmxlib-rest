@@ -1,0 +1,6 @@
+# What EGM's bootstrap leaves without an EGM.md contract. .gitignore's
+# entries are skipped as well. The contracts cover src/ and tools/; tests/
+# is excluded by EGM's own rules.
+
+# Prose, not code: the docs site, including docs/design/ and its EGM reports.
+docs/

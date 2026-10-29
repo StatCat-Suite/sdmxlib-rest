@@ -104,6 +104,13 @@ nav:
       - HTTP behaviour: http.md
       - Writing a data route: data-plane.md
       - Benchmarks: benchmarks.md
+  - Design:
+      - design/index.md
+      - Scope and seams: design/scope.md
+      - URL grammar: design/url-grammar.md
+      - Availability: design/availability.md
+      - Tokens and cache keys: design/tokens.md
+      - Unwritable content: design/content-validity.md
   - API Reference:
       - Application: api/app.md
       - Runtime and provider: api/runtime.md

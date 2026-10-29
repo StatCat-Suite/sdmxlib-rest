@@ -241,7 +241,7 @@ _VERSION_EXAMPLES: dict[str, Example] = {
 #                                stubbed (walks dataflow → DSD → all codelists);
 #                                `full` returns the same references in full
 #   referencecompletestubs     implemented — same walk, stubs keep name + description
-#   referencepartial           approximated as referencestubs — strict version needs a
+#   referencepartial           approximated as referencestubs (GH-69) — strict version needs a
 #                                per-component "items actually used in data" join;
 #                                .Stat Explorer sends this on every dataflow preview, so
 #                                returning 501 broke compatibility. The approximation gives
@@ -286,9 +286,10 @@ _DETAIL_EXAMPLES: dict[str, Example] = {
 #   descendants / all          DSD + every codelist, concept scheme and
 #                                hierarchy the DSD references; in full for
 #                                detail=full, as stubs otherwise (GH-32)
-#   none / parents / parentsandsiblings  return only the queried artefact;
-#                                this single-layer bundle has no real parent
-#                                links to walk back up.
+#   none                       returns only the queried artefact.
+#   parents / parentsandsiblings  on a Dataflow, add every other Dataflow and
+#                                the linked DSD (`_resolve_parents_and_siblings`);
+#                                on any other artefact, add nothing.
 #   any artefact-type name     accepted but currently returns only the
 #                                queried artefact — filtering the walk to one
 #                                referenced type isn't wired yet, but rejecting
@@ -375,7 +376,7 @@ async def get_structure(
                 "`allstubs` / `allcompletestubs` strip items; "
                 "`referencestubs` / `referencecompletestubs` keep the queried artefact full and "
                 "add its referenced artefacts as stubs. "
-                "`referencepartial` and `raw` return 501."
+                "`referencepartial` is served as `referencestubs`; `raw` returns 501."
             ),
             openapi_examples=_DETAIL_EXAMPLES,
         ),
@@ -387,7 +388,8 @@ async def get_structure(
                 "Per SDMX-REST 2.2.2. `none` (default), `children`, `descendants`, `all` are honoured, "
                 "returning referenced artefacts in full for `detail=full` and as stubs for the stub "
                 "and `reference*` details; "
-                "`parents` / `parentsandsiblings` walk up where the catalogue models them. Any "
+                "`parents` / `parentsandsiblings` on a Dataflow return every other Dataflow plus its "
+                "DSD, and nothing for other artefact types. Any "
                 "artefact-type token (e.g. `contentconstraint`, `dataflow`) is accepted for spec compat "
                 "but currently behaves as `none`."
             ),

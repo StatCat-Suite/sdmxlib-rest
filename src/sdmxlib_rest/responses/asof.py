@@ -9,9 +9,11 @@ query param).
 
 This service runs from a single immutable bundle per process, identified
 by ``build_id``. There's no history layer — point-in-time queries
-aren't meaningful. Calling `reject_asof` from each route surfaces
-the right HTTP status to a strict client and registers the param in
-the OpenAPI schema so it's discoverable.
+aren't meaningful. The structure and metadata routes declare `AsOf` and
+call `reject_asof`, which surfaces the 501 to a strict client and
+registers the param in the OpenAPI schema so it's discoverable.
+`/availability` does not declare ``asOf``, so there it is an unknown
+query parameter and `reject_unknown_query_params` answers 400.
 """
 
 from __future__ import annotations

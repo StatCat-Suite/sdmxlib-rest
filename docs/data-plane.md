@@ -15,7 +15,6 @@ Every helper takes the request's parameters and the flow's
 
 | Helper | Does |
 | --- | --- |
-| `key_dimension_ids` | The flow's key dimensions in data structure order, which is the order a dotted key is read in |
 | `parse_c_params` | Parses `c[<id>]=<expr>` filters, with the operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `co`, `nc`, `sw` and `ew` |
 | `build_non_eq_where` | Turns the non-equality filters into SQL fragments and parameters |
 | `parse_sort` | Parses `sort=` into physical columns and directions |
@@ -26,6 +25,7 @@ Every helper takes the request's parameters and the flow's
 
 | Helper | Does |
 | --- | --- |
+| `key_dimension_ids` | The flow's key dimensions in data structure order, which is the order a dotted key is read in |
 | `project_binding` | Trims the binding to the `attributes=` and `measures=` the request names |
 | `project_arrow_batches` | Applies the same projection to Arrow batches, for Parquet output |
 | `label_maps_for_dims` | Code-to-label maps for a CSV with label columns |

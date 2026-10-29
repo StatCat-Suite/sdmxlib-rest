@@ -62,8 +62,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/StatCat-Suite/sdmxlib-rest"
 Repository = "https://github.com/StatCat-Suite/sdmxlib-rest"
-# No docs site: the README is the documentation.
-Documentation = "https://github.com/StatCat-Suite/sdmxlib-rest#readme"
+Documentation = "https://statcat-suite.github.io/sdmxlib-rest/"
 "Issue Tracker" = "https://github.com/StatCat-Suite/sdmxlib-rest/issues"
 Changelog = "https://github.com/StatCat-Suite/sdmxlib-rest/blob/main/CHANGELOG.md"
 
@@ -76,6 +75,11 @@ Changelog = "https://github.com/StatCat-Suite/sdmxlib-rest/blob/main/CHANGELOG.m
 # with a backend the metadata says is unsupported.
 requires = ["uv_build>=0.11.6,<0.14.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# The EGM.md contracts describe the source for developers; the wheel carries
+# the package alone. The sdist keeps them as part of the source.
+wheel-exclude = ["**/EGM.md"]
 
 # Pin the index to public PyPI at the project level so the lock file is
 # portable — a host's user-level uv.toml may point at an authenticated mirror,
