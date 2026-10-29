@@ -11,10 +11,11 @@ declaration (dozens of decorators across ``routes/`` and ``v1/``), this
 middleware sits above the routing layer and:
 
 1. When ``scope["method"] == "HEAD"``, rewrites it to ``GET`` before
-   dispatching. Downstream middleware (perf log, ConditionalGet,
-   compression, CORS) all see GET and behave as if HEAD support was
-   native — including ``ConditionalGetMiddleware``'s 304 short-circuit
-   on ``If-None-Match`` hits.
+   dispatching. The middleware inside it (compression, version rewrite,
+   ``?lang=`` override, ConditionalGet) sees GET and behaves as if HEAD
+   support was native — including ``ConditionalGetMiddleware``'s 304
+   short-circuit on ``If-None-Match`` hits. The perf log, any
+   ``outer_middleware`` and CORS sit outside it and see the original HEAD.
 2. Taps the ASGI ``send`` stream to drop every ``http.response.body``
    chunk, so the response reaches the wire as a valid HEAD (status +
    headers + empty body) per RFC 7231 §4.3.2.

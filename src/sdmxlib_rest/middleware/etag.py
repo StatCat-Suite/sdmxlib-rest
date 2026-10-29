@@ -1,20 +1,22 @@
 """Conditional GET (ETag / Last-Modified / 304) middleware.
 
 A publication of the bundle is immutable — every (URL + query string +
-Accept header) deterministically maps to one byte-stream until the
-bundle is re-published, which mints a new ``token``, or an annotator's
-fingerprint changes (GH-2); ``effective_token`` folds in both. That makes conditional
-GET trivial:
+Accept header + language) deterministically maps to one byte-stream until
+the bundle is re-published, which mints a new ``token``, or an annotator's
+fingerprint changes (GH-2); ``effective_token`` folds in both. That makes
+conditional GET trivial:
 
-- ETag is a hash of ``(effective_token, path, query string, Accept)`` — different
-  publications produce different ETags; different responses from the same
-  one do too (because path/query/Accept differ).
+- ETag is a hash of ``(app version, effective_token, path, query string,
+  Accept, resolved language)``. The app version changes every ETag on a
+  release; the resolved language is the primary tag parsed from
+  ``Accept-Language`` (``en`` when absent). The hash never reads the body,
+  so it is the same with or without compression.
 - Last-Modified is the publication's timestamp (``runtime.last_modified``).
 
 When a client sends ``If-None-Match`` matching the ETag, or
 ``If-Modified-Since`` >= that timestamp, we return ``304 Not Modified``
 with no body. Otherwise the response carries ``ETag``, ``Last-Modified``,
-and ``Vary: Accept`` so caches behave correctly.
+and ``Vary: Accept, Accept-Language`` so caches behave correctly.
 """
 
 from __future__ import annotations

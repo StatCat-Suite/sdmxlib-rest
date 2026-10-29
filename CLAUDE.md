@@ -27,8 +27,8 @@ All are Protocols carried on `CatalogRuntime` (`runtime.py`).
 
 `CatalogProvider` is the one seam that names a concrete type: it returns an
 `sl.BundleRegistry`, the read-only registry `LocalRegistry.bundle` opens,
-because `binding_for` — which every data-plane helper needs — exists only
-there and no sdmxlib Protocol covers it.
+because `binding_for` — which the binding-driven data-plane helpers need —
+exists only there and no sdmxlib Protocol covers it.
 
 | Seam | File | Default |
 |---|---|---|
@@ -50,6 +50,7 @@ src/sdmxlib_rest/
     splice.py            # post-serialise JSON transform pipeline
     negotiation.py       # Accept / content negotiation
     localization.py      # Accept-Language localisation
+    logging.py           # configure_logging, for consumers; no library module calls it
     structure_cache.py   metadata_store.py   availability_values.py  filter_shaper.py
     overlays.py          # OverlayAnnotator: sdmxlib annotation overlays at serve time
     data/                # data-plane helpers; consumers own the route (see below)
@@ -70,48 +71,42 @@ src/sdmxlib_rest/
 
 **The library owns data-plane *helpers*; consumers own the `/data` route.**
 
-Orchestration is where response caching, partition pushdown and vendor
-extensions live, and every catalog shapes those differently. A consumer gets the
-fiddly parts — key parsing, projection, paging headers, SQL fragments, the
-arrow→CSV/parquet encoders — and writes its own handler around them.
+A consumer gets the fiddly parts (the key's slot order, filter parsing,
+projection, paging headers, SQL fragments, the arrow→CSV/parquet encoders) and
+writes its own handler around them. Resist requests to "just add a data route": `docs/design/scope.md`
+records why it was rejected and what would reopen it.
 
-`/availability` is the one library route that reads observations. It reads
-them through sdmxlib's query DSL, `registry.obs(flow)` (#6), so a provider's
-registry must reach its lake on its own connection; `meta_conn` is only for
-consumers' seams. The DSL builds one query root per request, ~13–19 ms on a
-large census bundle (sdmxlib#426); don't cache roots across requests, since a
-root binds the constructing thread's cursor.
-
-Resist requests to "just add a data route". It was considered and rejected with
-a quantitative inventory of what each consumer's handler does.
+`/availability` is the one library route that reads observations, through
+sdmxlib's query DSL, `registry.obs(flow)` (#6), so a provider's registry must
+reach its lake on its own connection; `meta_conn` is only for consumers' seams.
+Don't cache DSL roots across requests: a root binds the constructing thread's
+cursor (sdmxlib#426). `docs/design/availability.md` has the query shapes and
+the measurements behind each.
 
 ## SDMX-REST 2.2.2 URL grammar
 
-Every published path has the 2.2.2 shape, which settles what a dotted key
-means. 2.2.2 makes the time dimension a **key slot**, so a key is parsed
-against `dsd.key_slot_ids("3.0")` and a short key returns 400.
+Every route serves 2.2.2 keys: time is a key slot, a key is parsed against
+`dsd.key_slot_ids("3.0")`, and a short key returns 400. A 1.5 surface is a
+consumer's forwarder, so the data plane takes no `ApiVersion`. A 1.5 key parsed
+against 2.2.2 slots returns wrong data without an error;
+`docs/design/url-grammar.md` explains, and lists the 1.5 spellings the routes
+accept.
 
-SDMX-REST 1.5/2.1 keeps time *out* of the key (`startPeriod` / `endPeriod`
-filter it instead), so a 1.5 key is one segment shorter for the same DSD.
-Parsing a key against the other generation's slot list shifts every value by
-one slot and returns wrong data without raising an error.
+## Design documents and EGM contracts
 
-**A 1.5 surface is a consumer's forwarder**, translating the older grammar
-before it reaches these routes. The forwarder knows which generation it serves
-and the routes serve only 2.2.2, so the data plane takes no `ApiVersion`.
-`AvailabilityKey` keys on the resolved flow URN, so two flows stay distinct
-under any forwarder path shape, and the 1.5 and 2.2.2 surfaces share one
-precomputed entry.
-
-Individual 1.5 *conveniences* are backported onto the 2.2.2 routes as alternate
-spellings where they cost nothing — the `all` wildcard,
-`startPeriod`/`endPeriod`, the no-`componentID` form.
+`docs/design/` records the decisions (scope, URL grammar, availability,
+tokens, unwritable content) and is part of the docs site; its `index.md`
+describes the EGM workflow for new designs. Each code directory carries an
+`EGM.md` contract (interface, invariants, side effects, verification), indexed
+from the root `EGM.md`. A change to a directory's public symbols or invariants
+updates its `EGM.md` and any design page that states them, in the same PR.
 
 ## The middleware ordering invariant
 
 `_install_middleware` in `app.py` builds a chain whose adjacencies each have a
-real failure mode — an ETag over compressed bytes, a `?lang=` that hashes wrong,
-a CORS preflight falling through to a 404. The docstring documents each one.
+real failure mode — a `?lang=` that hashes wrong, a HEAD the logging taps
+record as GET, a CORS preflight falling through to a 404. The docstring
+documents each one.
 **Read it before touching the order.** `tests/test_library_create_app.py` pins
 the sequence; change that assertion only together with the docstring.
 
@@ -214,7 +209,7 @@ carrying a "Moved from GitLab #N" line.
 ## Common commands
 
 ```bash
-just check     # ruff (warnings fail too) + docstrings + prose + Any ratchet + index guard + pyrefly
+just check     # ruff (warnings fail too) + format check + docstrings + prose + Any ratchet + index guard + pyrefly
 just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop with
                #   `uv run python tools/count_any.py --write`
 just test      # unit tests

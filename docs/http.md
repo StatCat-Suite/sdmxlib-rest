@@ -15,8 +15,9 @@ shifts every value one dimension and returns a wrong answer without an error.
 A consumer that serves the older grammar runs a forwarder that translates
 each request before it reaches these routes.
 
-The routes accept three 1.5 spellings: the `all` key, `startPeriod` and
-`endPeriod`, and the availability path without a `componentID`.
+The routes accept two 1.5 spellings: the `all` key, and `startPeriod` and
+`endPeriod`. The availability path without a `componentID` is not routed; a
+forwarder that serves it maps it to `componentID=all`.
 
 `/availability` needs an explicit version, such as `1.0`; `latest` is a 422.
 
@@ -35,8 +36,9 @@ shorthand, such as `application/json` or a media type without a version,
 matches. Responses advertise the two-part version (`version=2.0`) that
 SDMX-REST 2.2.2 publishes; requests may send either form.
 
-A query that matches nothing answers 204 for SDMX-JSON. XML responses keep
-their own empty form and answer 200.
+A structure or metadata query that matches nothing answers 204 for SDMX-JSON;
+XML responses keep their own empty form and answer 200. An `/availability`
+query that matches nothing answers 204 in every format.
 
 ## Languages
 
@@ -63,11 +65,13 @@ Error responses carry no ETag and no `Cache-Control`.
 
 - **Unknown query parameters are a 400** that names the parameter, so a typo
   such as `?detial=full` fails instead of being ignored.
-- **`asOf` is a 501.** The service serves one publication and keeps no
-  history.
+- **`asOf` is a 501** on the structure and metadata routes. The service
+  serves one publication and keeps no history. `/availability` does not take
+  `asOf`, so there it is the unknown-parameter 400.
 - **`HEAD`** works on every `GET` route and returns the `GET` headers.
 - **Compression:** gzip through isa-l, at level 1, for responses of 1 KB or
-  more. Parquet, zstd and octet-stream bodies pass uncompressed.
+  more. Parquet, zstd, zip and octet-stream bodies pass uncompressed, as do
+the types Starlette never compresses, such as images and event streams.
 - **Content no format can carry is a 500** that lists each artefact and the
   sdmxlib rule it breaks, for example a component with no concept.
 - **CORS** answers every preflight, including for paths the app does not
@@ -82,11 +86,14 @@ Error responses carry no ETag and no `Cache-Control`.
    CORS failure.
 2. **`outer_middleware`**, the consumer's, which sees the client's request
    and the encoded response.
-3. **Performance log**, which times the whole stack.
+3. **Performance log**, outside gzip and HEAD, so it counts the bytes sent
+   and records the client's method. CORS and `outer_middleware` sit outside
+   it, so its time leaves them out.
 4. **HEAD**, which turns `HEAD` into `GET` for the layers inside it, inside
    the logging taps so they record the client's method.
-5. **gzip**, outside the media-type rewrite, because the rewrite changes the
-   `Content-Type` that gzip reads.
+5. **gzip**. It compares only the base media type, and the rewrite changes
+   only the `version` parameter, so its place beside the rewrite changes no
+   response; the test pins it here.
 6. **Media-type version rewrite.**
 7. **`?lang=`**, outside the conditional-GET layer, so `?lang=fr` hashes like
    `Accept-Language: fr`.

@@ -2,9 +2,10 @@
 
 A consumer standing up an SDMX-REST service gets the routes from the library;
 the remaining work is the *assembly*. The middleware stack has an ordering
-invariant whose violations are hard to spot: an ETag computed over compressed
-bytes still looks like an ETag. Mounted surfaces must share one runtime, or each
-opens its own catalog. The multi-spec docs page is built by hand because
+invariant whose violations are hard to spot: a ``?lang=`` rewrite that lands
+after the ETag layer hashes the wrong language, and a CORS preflight that
+reaches the router answers 404. Mounted surfaces must share one runtime, or
+each opens its own catalog. The multi-spec docs page is built by hand because
 FastAPI's helper emits a single-spec page.
 
 This module owns the assembly and leaves every catalog-shaped decision to the
@@ -122,7 +123,7 @@ def library_routers() -> tuple[APIRouter, ...]:
 
 
 def _install_unwritable_handler(app: object) -> None:
-    """Answer sdmxlib's serialise-time ``ValidationError`` with a 500 naming artefact and rule (#10)."""
+    """Answer every sdmxlib ``ValidationError`` with a 500 naming artefact and rule (#10)."""
     add = getattr(app, "add_exception_handler", None)
     if add is not None:
         add(ValidationError, unwritable_content_response)
@@ -281,12 +282,22 @@ def _install_middleware(
       behavioural test fails when it moves outward *except* via the
       LangOverride relation above. If you need to move it, that is the only
       constraint the suite can currently defend.
-    - **GZip outside the version-advertise rewrite** — the rewrite edits
-      Content-Type, which the compression decision reads.
+    - **GZip outside the version-advertise rewrite** — no behaviour depends on
+      this adjacency. The skip-list in `SelectiveGZipMiddleware` and Starlette's
+      own exclusions compare the base media type only, and the rewrite changes
+      only the ``;version=`` parameter, so both orders compress the same
+      responses. ``tests/test_library_create_app.py`` pins the order.
     - **HeadMethod inside the logging taps** — it rewrites HEAD to GET so the
       ETag / GZip / version layers see a normal GET and the 304 short-circuit
       behaves identically. The taps stay outside it so they still observe the
       client's *original* method.
+    - **PerfLog outside GZip and HeadMethod** — ``bytes`` then counts the
+      compressed bytes that reach the wire, and ``method`` records HEAD as the
+      client sent it. CORS and the ``outer`` middleware sit outside PerfLog, so
+      ``wall_ms`` excludes them.
+    - **``outer`` middleware just inside CORS** — a consumer tap there observes
+      the client's original request, before the HEAD and ``?lang=`` rewrites,
+      and CORS answers preflights before they reach it.
     - **CORS outermost** — so it answers every OPTIONS preflight directly, even
       for paths the app doesn't route. A preflight that falls through to a 404
       reads to the browser as a CORS failure.
@@ -310,8 +321,10 @@ def _install_middleware(
         compresslevel=settings.gzip_compress_level,
     )
     app.add_middleware(HeadMethodMiddleware)
-    # Outermost of the taps: `wall_ms` then covers CORS, compression, ETag,
-    # routing and body render. A `None` sink short-circuits at zero cost.
+    # Outside compression and HeadMethod, so `bytes` is the wire size and the
+    # method is the client's own. CORS and `outer` sit outside it, so
+    # `wall_ms` covers compression, ETag, routing and body render only.
+    # A `None` sink short-circuits at zero cost.
     app.add_middleware(PerfLogMiddleware, sink=perf_sink)
     for spec in outer:
         app.add_middleware(spec.cls, **dict(spec.options))

@@ -1,8 +1,12 @@
-"""Turn sdmxlib's serialise-time ``ValidationError`` into a 500 that says what failed.
+"""Turn sdmxlib's ``ValidationError`` into a 500 that says what failed.
 
 sdmxlib validates every message it writes and refuses content the target
 format cannot carry: a component with no ``ConceptIdentity``, a metadataflow
 with no targets, a ``MetadataSet`` version SDMX-JSON's semver pattern rejects.
+sdmxlib also raises ``ValidationError`` when an artefact is built, for example
+from ``DataConstraint(...)`` in `render_availability`. The handler catches
+every ``ValidationError`` a route raises, from either source, and its body
+calls the content unwritable in both cases.
 Unhandled, that surfaced as Starlette's bare ``Internal Server Error``, so a
 consumer could see *that* a route failed but not which artefact or which rule
 (#10). The defect is in the catalogue, so the fix is the producer's, and this
@@ -27,7 +31,7 @@ if TYPE_CHECKING:
 
 
 async def unwritable_content_response(request: Request, exc: ValidationError) -> JSONResponse:
-    """The 500 for content sdmxlib refused to serialise, naming each artefact and rule.
+    """The 500 for content sdmxlib refused to build or serialise, naming each artefact and rule.
 
     Each issue's ``path`` names the artefact (``MetadataStructure:MSD_X``) and
     the field within it; ``message`` names the rule and why it fails. The

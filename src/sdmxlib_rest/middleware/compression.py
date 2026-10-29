@@ -12,11 +12,21 @@ Two behaviours stacked into one ASGI component:
    (CSV serialization in sdmxlib) into view.
 
 2. **Skip-list for already-compressed bodies.** `SelectiveGZipMiddleware`
-   wraps the isa-l middleware and tags responses whose ``Content-Type``
-   is in `SKIP_GZIP_CONTENT_TYPES` (parquet, octet-stream, zstd)
-   with ``Content-Encoding: identity`` *before* the gzip layer sees
-   them. The gzip middleware short-circuits on ``content-encoding in
-   headers``, so the tagged responses go through untouched.
+   wraps the isa-l middleware and tags responses whose base media type
+   is in `SKIP_GZIP_CONTENT_TYPES` (``application/vnd.apache.parquet``,
+   ``application/x-parquet``, ``application/octet-stream``,
+   ``application/zstd``, ``application/zip``) with
+   ``Content-Encoding: identity`` *before* the gzip layer sees them. The
+   gzip responder short-circuits on ``content-encoding in headers``, so
+   the tagged responses go through untouched.
+
+The responders are Starlette's, so their built-in exclusions apply too.
+They pass through uncompressed any response that already carries
+``Content-Encoding``, any 206 partial response, any body under
+``minimum_size``, and any type in Starlette's
+``DEFAULT_EXCLUDED_CONTENT_TYPES``: gzip, zip, grpc, avif, gif, jpeg,
+png and webp images, ``audio/*``, ``video/*``, woff fonts and
+``text/event-stream``.
 """
 
 from __future__ import annotations

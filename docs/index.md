@@ -59,7 +59,7 @@ sdmxlib-rest depends on sdmxlib and on nothing else in the suite. It serves a
 bundle that statcatlib builds and sdmxlib defines; the
 [suite architecture](https://statcat-suite.github.io/architecture/) describes
 the bundle and its lifecycle. A test fails the build if the library imports
-statcatlib or a consumer.
+statcatlib.
 
 ## Install
 

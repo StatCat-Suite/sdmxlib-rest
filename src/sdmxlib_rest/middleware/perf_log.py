@@ -6,10 +6,11 @@ which ``BaseHTTPMiddleware`` would collapse), and emits a single record
 covering path + status + duration + wire-size + a few caching-relevant
 request headers.
 
-Positioned OUTERMOST so it measures the whole middleware stack — CORS,
-compression, ETag, negotiation, and the route body all fold into
-``wall_ms``. OPTIONS preflights are skipped so the CORS chatter doesn't
-flood the log.
+`create_app` installs it outside compression, ETag and the HEAD rewrite, so
+those layers, negotiation and the route body all fold into ``wall_ms``.
+CORS and any ``outer_middleware`` sit outside it, so ``wall_ms`` excludes
+them. OPTIONS preflights and ``/health`` are skipped so CORS chatter and
+health checks don't flood the log.
 
 Route via the sink argument to ``PerfLogMiddleware(app, sink=<callable>)``.
 The default wiring in ``app.py`` binds it to a loguru sink pointed at
@@ -65,7 +66,7 @@ class _Sink(Protocol):
 
 
 class PerfLogMiddleware:
-    """Emit one structured record per HTTP request (skipped for OPTIONS)."""
+    """Emit one structured record per HTTP request (skipped for OPTIONS and ``/health``)."""
 
     def __init__(self, app: ASGIApp, sink: _Sink | None = None) -> None:
         self.app = app
