@@ -19,7 +19,7 @@ Every helper takes the request's parameters and the flow's
 | `build_non_eq_where` | Turns the non-equality filters into SQL fragments and parameters |
 | `parse_sort` | Parses `sort=` into physical columns and directions |
 | `validate_dimension_at_observation` | Checks `dimensionAtObservation` against the binding |
-| `reject_unsupported_standard_params` | Answers 501 for standard parameters a single-bundle service cannot honour |
+| `reject_unsupported_standard_params` | Answers 501 for standard parameters a single-edition service cannot honour |
 
 **Choosing columns** (`data.projection`):
 
@@ -67,7 +67,7 @@ def data(..., registry=Depends(get_registry)):
 
 `binding_for` returns the binding with its `database_role` naming the catalog
 its table is attached as in this registry (`registry.lake_alias` for the lake,
-an alias prefixed with the bundle id and token), so SQL built as
+an alias prefixed with the product id and edition id), so SQL built as
 `<database_role>.<table_location>` reads the right lake. A binding read some other way, with `get_all`, goes through
 `registry.locate(binding)` first.
 

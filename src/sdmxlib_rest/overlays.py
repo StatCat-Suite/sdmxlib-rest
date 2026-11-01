@@ -1,9 +1,9 @@
 """A `MessageAnnotator` that applies sdmxlib annotation overlays at serve time (GH-10).
 
-An overlay (``sdmxlib.bundle.Overlay``) is a versioned document of entries that
+An overlay (``sdmxlib.edition.Overlay``) is a versioned document of entries that
 set, add or remove annotations of one type on the artefacts and items a
 selector picks: annotations only, never ids, codes, structure or data. It lets
-a deployment change display hints without rebuilding its bundle.
+a deployment change display hints without rebuilding its edition.
 
 `OverlayAnnotator` applies its overlays to every structure message before it
 is serialised, so the change reaches every wire format. Its fingerprint is the
@@ -23,12 +23,12 @@ revalidation.
 Applying overlays copies every artefact an entry selects, on every request the
 structure cache does not answer. A ``*`` or class-name selector that reaches a
 very large codelist's codes pays that on each such request; keep selectors
-specific, or settle a change into the bundle with ``sdmxlib.bundle.fold_overlays``.
+specific, or settle a change into the edition with ``sdmxlib.edition.fold_overlays``.
 
 With an ``audience``, an entry applies when its ``scope`` is that audience or
 ``null``; without one, every entry applies. An overlay that changes a name or
 description (``texts``) is refused when it is set, since sdmxlib applies those
-only in ``fold_overlays``, into a new publication.
+only in ``fold_overlays``, into a new edition.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Self
 
 from attrs import define, field
-from sdmxlib.bundle import OverlayError, applied, apply_overlays, overlay_digest, read_overlay
+from sdmxlib.edition import OverlayError, applied, apply_overlays, overlay_digest, read_overlay
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -44,15 +44,15 @@ if TYPE_CHECKING:
 
     import duckdb
     import sdmxlib as sl
-    from sdmxlib.bundle import MergeHook, Overlay
+    from sdmxlib.edition import MergeHook, Overlay
     from sdmxlib.model.message import StructureMessage
 
 
 def _fingerprint(overlays: Sequence[Overlay], merge: Mapping[str, MergeHook] | None, audience: str | None) -> str:
     """The hooks line, then each overlay's digest as applied to `audience`; ``""`` for no overlays.
 
-    The lines sdmxlib's ``effective_token`` hashes after ``v2`` and the
-    manifest token. The runtime hashes a fingerprint after the same two lines,
+    The lines sdmxlib's ``effective_token`` hashes after ``v3`` and the
+    edition id. The runtime hashes a fingerprint after the same two lines,
     so the two tokens are equal.
     """
     if not overlays:
@@ -66,7 +66,7 @@ def _refuse_texts(overlays: Sequence[Overlay]) -> None:
         if overlay.texts:
             msg = (
                 f"overlay {overlay.id!r} changes {len(overlay.texts)} name or description text(s); "
-                "sdmxlib applies those only with fold_overlays, into a new publication"
+                "sdmxlib applies those only with fold_overlays, into a new edition"
             )
             raise OverlayError(msg)
 
@@ -106,7 +106,7 @@ class OverlayAnnotator:
         """Build an annotator applying the overlay documents at ``paths``, in order.
 
         A file that is not an overlay document this sdmxlib can read raises
-        `sdmxlib.bundle.OverlayError` from `read_overlay`.
+        `sdmxlib.edition.OverlayError` from `read_overlay`.
 
         Args:
             paths: Overlay documents, applied in this order.
@@ -149,7 +149,7 @@ class OverlayAnnotator:
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,  # noqa: ARG002
+        registry: sl.EditionRegistry,  # noqa: ARG002
         conn: duckdb.DuckDBPyConnection,  # noqa: ARG002
         token: str,  # noqa: ARG002
     ) -> StructureMessage:

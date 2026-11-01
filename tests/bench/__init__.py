@@ -1,1 +1,1 @@
-"""Bundle-tier benchmarks — ratios against a real bundle, not wall times."""
+"""Edition-tier benchmarks — ratios against a real edition, not wall times."""

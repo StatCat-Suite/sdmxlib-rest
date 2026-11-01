@@ -85,13 +85,13 @@ class CatalogRuntime:
         return self._opened is not None
 
     @property
-    def registry(self) -> sl.BundleRegistry:
+    def registry(self) -> sl.EditionRegistry:
         """The registry (opening it if needed)."""
         return self.ensure_open().registry
 
     @property
     def meta_conn(self) -> duckdb.DuckDBPyConnection:
-        """The shared read-only ``meta.duckdb`` connection (opening if needed)."""
+        """The shared read-only ``metadata.duckdb`` connection (opening if needed)."""
         return self.ensure_open().meta_conn
 
     @property
@@ -101,7 +101,7 @@ class CatalogRuntime:
 
     @property
     def build_id(self) -> str:
-        """Build id of the open bundle, or ``""`` if not open (does NOT force open).
+        """Build id of the open edition, or ``""`` if not open (does NOT force open).
 
         Non-forcing on purpose: ETag / cache-key callers want "the identity if
         the registry is up, else skip" — the empty string is the skip signal,
@@ -111,22 +111,22 @@ class CatalogRuntime:
 
     @property
     def built_at(self) -> str:
-        """ISO-8601 build timestamp of the open bundle, or ``""`` if not open (non-forcing)."""
+        """ISO-8601 build timestamp of the open edition, or ``""`` if not open (non-forcing)."""
         return self._opened.built_at if self._opened is not None else ""
 
     @property
     def token(self) -> str:
         """What every cache and the ETag key on, or ``""`` if not open (non-forcing).
 
-        The provider's ``token`` if it set one, else the sdmxlib bundle
-        manifest's (new at every publication), else ``build_id``.
+        The provider's ``token`` if it set one, else the sdmxlib edition
+        manifest's edition id (new for every edition), else ``build_id``.
         """
         if self._opened is None:
             return ""
         if self._opened.token:
             return self._opened.token
         manifest = self._opened.registry.manifest
-        return manifest.token if manifest is not None else self._opened.build_id
+        return manifest.edition_id if manifest is not None else self._opened.build_id
 
     @property
     def effective_token(self) -> str:
@@ -136,21 +136,21 @@ class CatalogRuntime:
         to ``token`` while the annotator has no fingerprint, so ETags stay
         byte-identical for a consumer that never sets one. The folding mirrors
         sdmxlib's ``effective_token`` for overlays: a sha256 over the lines
-        ``v2``, the token and the fingerprint. `AvailabilityKey` keeps the bare
+        ``v3``, the token and the fingerprint. `AvailabilityKey` keeps the bare
         ``token``: annotations cannot change availability.
         """
         token = self.token
         fingerprint = annotator_fingerprint(self.message_annotator)
         if not token or not fingerprint:
             return token
-        return hashlib.sha256(f"v2\n{token}\n{fingerprint}".encode()).hexdigest()
+        return hashlib.sha256(f"v3\n{token}\n{fingerprint}".encode()).hexdigest()
 
     @property
     def last_modified(self) -> str:
         """ISO-8601 ``Last-Modified`` source, or ``""`` if not open (non-forcing).
 
         Follows ``token``: when the token is the sdmxlib manifest's, so is the
-        timestamp. A provider's ``built_at`` can stay put across a republish
+        timestamp. A provider's ``built_at`` can stay put across a new edition
         that minted a new token, and an ``If-Modified-Since`` would then 304 a
         stale body that the ETag correctly misses.
 
@@ -184,7 +184,7 @@ class CatalogRuntime:
         return max(published_at, since).isoformat()
 
     def _published_at(self) -> str:
-        """The publication timestamp `last_modified` starts from."""
+        """The edition's timestamp `last_modified` starts from."""
         assert self._opened is not None  # noqa: S101 — callers check first
         if self._opened.token:
             return self._opened.built_at
@@ -215,13 +215,13 @@ def get_runtime(request: Request) -> CatalogRuntime:
     return runtime
 
 
-def get_registry(request: Request) -> sl.BundleRegistry:
+def get_registry(request: Request) -> sl.EditionRegistry:
     """FastAPI dependency: the process/app-wide registry."""
     return get_runtime(request).registry
 
 
 def get_meta_conn(request: Request) -> duckdb.DuckDBPyConnection:
-    """FastAPI dependency: the shared read-only ``meta.duckdb`` connection."""
+    """FastAPI dependency: the shared read-only ``metadata.duckdb`` connection."""
     return get_runtime(request).meta_conn
 
 
@@ -231,12 +231,12 @@ def get_splices(request: Request) -> SpliceRegistry:
 
 
 def get_build_id(request: Request) -> str:
-    """FastAPI dependency: the open bundle's build id (``""`` before open)."""
+    """FastAPI dependency: the open edition's build id (``""`` before open)."""
     return get_runtime(request).build_id
 
 
 def get_token(request: Request) -> str:
-    """FastAPI dependency: what caches key on for the open bundle (``""`` before open)."""
+    """FastAPI dependency: what caches key on for the open edition (``""`` before open)."""
     return get_runtime(request).token
 
 

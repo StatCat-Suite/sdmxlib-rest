@@ -1,6 +1,6 @@
 """What `/availability`'s three query shapes cost, as ratios.
 
-**Ratios, never wall times.** On a large census bundle the same query drifted 2x
+**Ratios, never wall times.** On a large census edition the same query drifted 2x
 between otherwise identical runs — 3.1 s to 5.3 s for one availability answer —
 purely on machine load and page-cache state, while every ratio held. So
 ``assert elapsed < 4`` is a flaky test on a quiet laptop and a false pass on a
@@ -9,7 +9,7 @@ clause under test, which says "this costs what it should" rather than "this
 machine is fast". The bounds are set well inside the observed effect so they
 fail when the effect disappears, not when the CI runner is busy.
 
-Observed on a ~500M-row, 6-dimension census bundle, duckdb 1.5.5 and 1.5.6 alike,
+Observed on a ~500M-row, 6-dimension census edition, duckdb 1.5.5 and 1.5.6 alike,
 except where a row names duckdb 2.0.0:
 
 =================================================  ==================
@@ -34,11 +34,11 @@ import duckdb
 import pytest
 
 if TYPE_CHECKING:
-    from tests.bench.conftest import Bundle
+    from tests.bench.conftest import Edition
 
-pytestmark = pytest.mark.bundle
+pytestmark = pytest.mark.edition
 
-#: The unfiltered comparison was measured on a ~500M-row bundle. Below this the
+#: The unfiltered comparison was measured on a ~500M-row edition. Below this the
 #: per-dimension arrays can outweigh the scans saved, and a loss is expected.
 _LARGE_LAKE_ROWS = 100_000_000
 
@@ -65,17 +65,17 @@ def _best_params(conn: duckdb.DuckDBPyConnection, sql: str, params: list[object]
     return best
 
 
-def _distinct(bundle: Bundle, column: str, *, join: str) -> str:
+def _distinct(edition: Edition, column: str, *, join: str) -> str:
     quoted = f'"{column}"'
-    return f"SELECT DISTINCT {quoted} FROM {bundle.main}{join} WHERE {quoted} IS NOT NULL ORDER BY {quoted}"
+    return f"SELECT DISTINCT {quoted} FROM {edition.main}{join} WHERE {quoted} IS NOT NULL ORDER BY {quoted}"
 
 
-def _combined(bundle: Bundle, columns: tuple[str, ...]) -> str:
+def _combined(edition: Edition, columns: tuple[str, ...]) -> str:
     parts = [f'array_agg(DISTINCT "{c}" ORDER BY "{c}") FILTER (WHERE "{c}" IS NOT NULL)' for c in columns]
-    return f"SELECT {', '.join(parts)}, COUNT(*) FROM {bundle.main}"
+    return f"SELECT {', '.join(parts)}, COUNT(*) FROM {edition.main}"
 
 
-def test_the_sidecar_join_is_what_count_cannot_elide(bundle: Bundle) -> None:
+def test_the_sidecar_join_is_what_count_cannot_elide(edition: Edition) -> None:
     """#3: the join our route appends unconditionally, priced on ``COUNT(*)``.
 
     DuckDB elides the join for a single-column ``DISTINCT`` but cannot for
@@ -83,11 +83,11 @@ def test_the_sidecar_join_is_what_count_cannot_elide(bundle: Bundle) -> None:
     changes the count. That is both why it is expensive and why leaving it on
     is a correctness risk.
     """
-    if bundle.sidecar is None or not bundle.join_keys:
-        pytest.skip("bundle has no sidecar, so there is no join to price")
+    if edition.sidecar is None or not edition.join_keys:
+        pytest.skip("edition has no sidecar, so there is no join to price")
 
-    plain = _best(bundle.conn, f"SELECT COUNT(*) FROM {bundle.main}")
-    joined = _best(bundle.conn, f"SELECT COUNT(*) FROM {bundle.main}{bundle.join_clause()}")
+    plain = _best(edition.conn, f"SELECT COUNT(*) FROM {edition.main}")
+    joined = _best(edition.conn, f"SELECT COUNT(*) FROM {edition.main}{edition.join_clause()}")
 
     assert joined > plain * 10, (
         f"expected the unconditional sidecar join to dominate COUNT(*); "
@@ -97,80 +97,82 @@ def test_the_sidecar_join_is_what_count_cannot_elide(bundle: Bundle) -> None:
     )
 
 
-def test_the_join_does_not_change_the_count_on_this_bundle(bundle: Bundle) -> None:
+def test_the_join_does_not_change_the_count_on_this_edition(edition: Edition) -> None:
     """The correctness half of #3, which is a property of the data, not the code.
 
     A 1:1 sidecar makes the joined count right. This records which kind of
-    bundle we are measuring, so a failure here is the interesting news: a bundle
-    whose sidecar fans out. Since #8 the route refuses such a bundle with a 500
+    edition we are measuring, so a failure here is the interesting news: an edition
+    whose sidecar fans out. Since #8 the route refuses such an edition with a 500
     on every query that needs the join, rather than shipping an inflated
     ``obs_count``, so a failure here also predicts those 500s.
     """
-    if bundle.sidecar is None or not bundle.join_keys:
-        pytest.skip("bundle has no sidecar")
+    if edition.sidecar is None or not edition.join_keys:
+        pytest.skip("edition has no sidecar")
 
-    keys = ", ".join(f'"{k}"' for k in bundle.join_keys)
-    counted = bundle.conn.execute(f"SELECT count(*), count(DISTINCT ({keys})) FROM {bundle.sidecar}").fetchone()
+    keys = ", ".join(f'"{k}"' for k in edition.join_keys)
+    counted = edition.conn.execute(f"SELECT count(*), count(DISTINCT ({keys})) FROM {edition.sidecar}").fetchone()
     assert counted is not None, "an aggregate always returns a row"
     rows, distinct = counted
 
     if rows != distinct:
         pytest.fail(
-            f"{bundle.sidecar} has {rows:,} rows for {distinct:,} distinct join keys, so a "
-            f"COUNT(*) over the join would be INFLATED on this bundle; /availability refuses "
+            f"{edition.sidecar} has {rows:,} rows for {distinct:,} distinct join keys, so a "
+            f"COUNT(*) over the join would be INFLATED on this edition; /availability refuses "
             f"(500) every query that needs the join until the producer makes it unique (#8)."
         )
-    joined = bundle.conn.execute(f"SELECT COUNT(*) FROM {bundle.main}{bundle.join_clause()}").fetchone()
+    joined = edition.conn.execute(f"SELECT COUNT(*) FROM {edition.main}{edition.join_clause()}").fetchone()
     assert joined is not None
-    assert int(joined[0]) == bundle.rows
+    assert int(joined[0]) == edition.rows
 
 
-def test_unfiltered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
+def test_unfiltered_the_combined_aggregate_beats_the_loop(edition: Edition) -> None:
     """#4, half one: with no filter the combined aggregate wins on DuckDB 2 (GH-36).
 
     This is the dominant .Stat request (the bare-flow URL). DuckDB 1.5 lost it
     by 2.8x, building a sorted array per dimension; DuckDB 2 wins it by 1.2x on
-    a ~500M-row census bundle. A bundle with few rows and a very large
+    a ~500M-row census edition. An edition with few rows and a very large
     geography can still lose: on the synthetic ``census`` shape (20M rows) the
     loop usually wins, by 1.2-2x. Below `_LARGE_LAKE_ROWS` a loss is reported as
     an expected failure with its ratio; above it, a loss fails.
     """
-    columns = bundle.dims[:6]
+    columns = edition.dims[:6]
     if len(columns) < 2:
         pytest.skip("need at least two dimension-ish columns to compare the shapes")
 
-    loop = sum(_best(bundle.conn, _distinct(bundle, c, join="")) for c in columns)
-    loop += _best(bundle.conn, f"SELECT COUNT(*) FROM {bundle.main}")
-    combined = _best(bundle.conn, _combined(bundle, columns))
+    loop = sum(_best(edition.conn, _distinct(edition, c, join="")) for c in columns)
+    loop += _best(edition.conn, f"SELECT COUNT(*) FROM {edition.main}")
+    combined = _best(edition.conn, _combined(edition, columns))
 
-    if combined >= loop and bundle.rows < _LARGE_LAKE_ROWS:
+    if combined >= loop and edition.rows < _LARGE_LAKE_ROWS:
         pytest.xfail(
-            f"the loop wins on {bundle.rows:,} rows: loop={loop:.2f}s combined={combined:.2f}s "
+            f"the loop wins on {edition.rows:,} rows: loop={loop:.2f}s combined={combined:.2f}s "
             f"({combined / loop:.2f}x); the route is tuned for {_LARGE_LAKE_ROWS:,}+"
         )
     assert combined < loop, (
         f"expected the combined aggregate to win unfiltered; "
         f"loop={loop:.2f}s combined={combined:.2f}s ({combined / loop:.2f}x). "
         f"`fast_path_eligible` sends unfiltered requests through it; if the loop wins "
-        f"on a large bundle too, exclude the unfiltered case again."
+        f"on a large edition too, exclude the unfiltered case again."
     )
 
 
-def test_filtered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
+def test_filtered_the_combined_aggregate_beats_the_loop(edition: Edition) -> None:
     """#4, half two: with a filter the combined form wins, which is why it survives.
 
     Any predicate makes every ``DISTINCT`` pay a scan of its own, and then one
     scan beats six. On DuckDB 1.5 this half alone kept the combined shape in
     the route.
     """
-    columns = bundle.dims[:6]
+    columns = edition.dims[:6]
     if len(columns) < 2:
         pytest.skip("need at least two dimension-ish columns to compare the shapes")
 
     # Narrow on a column that is not one of the aggregated ones where possible,
     # so the filter is not trivially answering the query it restricts.
     pivot = columns[1]
-    value = bundle.conn.execute(f'SELECT "{pivot}" FROM {bundle.main} GROUP BY 1 ORDER BY count(*) LIMIT 1').fetchone()
+    value = edition.conn.execute(
+        f'SELECT "{pivot}" FROM {edition.main} GROUP BY 1 ORDER BY count(*) LIMIT 1'
+    ).fetchone()
     if value is None:
         pytest.skip(f"no values to filter {pivot} on")
     where = f' WHERE "{pivot}" = ?'
@@ -179,12 +181,12 @@ def test_filtered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
     loop = 0.0
     for column in quoted:
         loop += _best_params(
-            bundle.conn,
-            f"SELECT DISTINCT {column} FROM {bundle.main}{where} AND {column} IS NOT NULL ORDER BY {column}",
+            edition.conn,
+            f"SELECT DISTINCT {column} FROM {edition.main}{where} AND {column} IS NOT NULL ORDER BY {column}",
             [value[0]],
         )
-    loop += _best_params(bundle.conn, f"SELECT COUNT(*) FROM {bundle.main}{where}", [value[0]])
-    combined = _best_params(bundle.conn, f"{_combined(bundle, columns)}{where}", [value[0]])
+    loop += _best_params(edition.conn, f"SELECT COUNT(*) FROM {edition.main}{where}", [value[0]])
+    combined = _best_params(edition.conn, f"{_combined(edition, columns)}{where}", [value[0]])
 
     assert combined < loop, (
         f"expected the combined aggregate to win once a filter narrows the scan; "
@@ -193,7 +195,7 @@ def test_filtered_the_combined_aggregate_beats_the_loop(bundle: Bundle) -> None:
     )
 
 
-def test_an_availability_answer_completes_under_a_hard_memory_cap(bundle: Bundle) -> None:
+def test_an_availability_answer_completes_under_a_hard_memory_cap(edition: Edition) -> None:
     """Bounded memory is a requirement, not a nice-to-have.
 
     A half-billion-row cube answers under 256 MB by spilling. Asserted as
@@ -201,14 +203,14 @@ def test_an_availability_answer_completes_under_a_hard_memory_cap(bundle: Bundle
     OOM and of a cliff — the cost of the cap is latency, which the issue
     records as a smooth trade (7.5 s at 256 MB, 4.4 s at 4 GB).
     """
-    columns = bundle.dims[:6]
-    capped = bundle.connect(memory_limit="256MB", threads=4)
+    columns = edition.dims[:6]
+    capped = edition.connect(memory_limit="256MB", threads=4)
     try:
         for column in columns:
-            _ = capped.execute(_distinct(bundle, column, join="")).fetchall()
-        count = capped.execute(f"SELECT COUNT(*) FROM {bundle.main}").fetchone()
+            _ = capped.execute(_distinct(edition, column, join="")).fetchall()
+        count = capped.execute(f"SELECT COUNT(*) FROM {edition.main}").fetchone()
         assert count is not None
-        assert int(count[0]) == bundle.rows
+        assert int(count[0]) == edition.rows
     finally:
         capped.close()
 
@@ -222,10 +224,10 @@ def _relaxed(constraints: dict[str, str], drop: str) -> tuple[str, list[str]]:
 
 
 @pytest.fixture(scope="module")
-def cold(bundle: Bundle) -> Bundle:
-    """The bundle, once eviction is shown to cool its page cache; skips otherwise.
+def cold(edition: Edition) -> Edition:
+    """The edition, once eviction is shown to cool its page cache; skips otherwise.
 
-    `Bundle.evict_page_cache` needs `os.posix_fadvise`, which Linux has and macOS
+    `Edition.evict_page_cache` needs `os.posix_fadvise`, which Linux has and macOS
     and Windows lack. On a VM, which includes GitHub's runners and Colima, the
     host may cache the guest's disk, so evicting the guest's cache can leave
     reads warm: one runner measured 1.28x, the next cooled. Either way a cold
@@ -234,23 +236,23 @@ def cold(bundle: Bundle) -> Bundle:
     """
     if not hasattr(os, "posix_fadvise"):
         pytest.skip("page-cache eviction needs os.posix_fadvise (Linux)")
-    sql = f'SELECT COUNT(DISTINCT "{bundle.dims[0]}") FROM {bundle.main} WHERE "{bundle.dims[0]}" IS NOT NULL'
-    _ = _best(bundle.conn, sql)  # warm it
-    warm = _best(bundle.conn, sql)
-    if bundle.evict_page_cache() == 0:
+    sql = f'SELECT COUNT(DISTINCT "{edition.dims[0]}") FROM {edition.main} WHERE "{edition.dims[0]}" IS NOT NULL'
+    _ = _best(edition.conn, sql)  # warm it
+    warm = _best(edition.conn, sql)
+    if edition.evict_page_cache() == 0:
         pytest.skip("nothing was evicted, so no measurement here would be cold")
     start = time.perf_counter()
-    _ = bundle.conn.execute(sql).fetchall()
+    _ = edition.conn.execute(sql).fetchall()
     cooled = time.perf_counter() - start
     if cooled < warm * 1.5:
         pytest.skip(
             f"eviction did not cool the cache (warm={warm * 1000:.0f}ms after={cooled * 1000:.0f}ms); "
             f"a VM's host caches its disk, so cold measurements here would be warm"
         )
-    return bundle
+    return edition
 
 
-def test_mode_available_does_not_want_a_single_scan_even_cold(cold: Bundle) -> None:
+def test_mode_available_does_not_want_a_single_scan_even_cold(cold: Edition) -> None:
     """#6: the per-dimension loop beats the one-scan form in both cache regimes.
 
     ``mode=available`` relaxes a different constraint per dimension, so collapsing

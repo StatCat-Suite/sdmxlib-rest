@@ -15,16 +15,16 @@ slower ([GitLab #3](https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues/3),
 [#6](https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues/6)).
 
 The cost is a contract on providers: the registry must reach its lake on its
-own connection. `LocalRegistry.bundle` attaches it there, and attaching a
+own connection. `LocalRegistry.edition` attaches it there, and attaching a
 DuckLake is a metadata read, measured at 20 ms and 8 MB for a 520-million-row
 lake ([GitLab #6](https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues/6)). The DSL builds one query root per request, 13 to 19 ms on a large
-census bundle; roots are not cached across requests, since a root binds the
+census edition; roots are not cached across requests, since a root binds the
 constructing thread's cursor.
 
 ## Query shapes
 
 The route picks one of three shapes. Each choice was measured on a
-500-million-row, six-dimension census bundle. The comments above the choice in
+500-million-row, six-dimension census edition. The comments above the choice in
 `routes/availability.py` carry the `componentID=all` tables, and the docstrings
 in `tests/bench/test_availability_sql.py` carry the `mode=available` ones. The
 bench asserts the ratios; it records times only in its docstrings.
@@ -41,7 +41,7 @@ benchmark in which the single scan wins cold reopens that request.
 
 ## Precompute
 
-A flow's value lists change only when its publication changes, so they can be
+A flow's value lists change only when its edition changes, so they can be
 computed once. Comparable services keep availability as content constraints
 built at load time.
 
@@ -68,7 +68,7 @@ planted. The value-level seam replaced it.
 
 ## The default
 
-With no seam installed every request scans. On the 500-million-row bundle an
+With no seam installed every request scans. On the 500-million-row edition an
 unfiltered answer took about 3 to 5 s warm and 5 to 8 s cold
 ([GitLab #7](https://gitlab.com/pinax-suite/sdmxlib-rest/-/issues/7)), uses 0.5 to
 1 GB of memory, and completes under a 256 MB cap in 7.5 s by spilling. That is

@@ -44,7 +44,7 @@ class _FakeProvider:
 
 
 def _open_runtime() -> CatalogRuntime:
-    """A runtime pre-opened with a fake build identity (no real bundle)."""
+    """A runtime pre-opened with a fake build identity (no real edition)."""
     rt = CatalogRuntime(_FakeProvider())
     rt.ensure_open()
     return rt
@@ -67,7 +67,7 @@ def _app(cache_control: str) -> FastAPI:
         return PlainTextResponse("no such artefact", status_code=404)
 
     # Inject a pre-opened runtime so the middleware's token is non-empty and
-    # the wrapped_send / ETag path actually runs (no real bundle needed).
+    # the wrapped_send / ETag path actually runs (no real edition needed).
     app.add_middleware(ConditionalGetMiddleware, runtime=_open_runtime(), cache_control=cache_control, version="test")
     return app
 

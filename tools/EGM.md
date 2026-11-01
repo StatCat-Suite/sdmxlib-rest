@@ -3,7 +3,7 @@
 ## Overview
 
 Standalone Python scripts that guard the repository and build the synthetic
-bundles the bench tier runs on. None is imported by the `sdmxlib_rest`
+editions the bench tier runs on. None is imported by the `sdmxlib_rest`
 package. Four are gates run through `justfile` recipes with `--check`, and
 `just check` runs all four. Three were ported from sdmxlib as part of the
 StatCat-Suite baseline (`check_docstrings.py`, `check_prose.py`,
@@ -19,7 +19,7 @@ measurement behind its design; read it before changing the script.
 | `count_any.py` | `just check-any` (`--check`, `--write`) | Counts `Any` used as a type in `src/`, following module-level aliases discovered across `src/`, and compares the total to `any_baseline.txt`. Functions: `alias_names`, `count_file`, `survey`, `main`. |
 | `any_baseline.txt` | read by `count_any.py` | The recorded `Any` count (currently 30). |
 | `check_indexes.py` | `just check-indexes` (`--check`) | Fails when a tracked file names a package index outside `PUBLIC_INDEX_HOSTS`, a credential-bearing file in `CREDENTIAL_BEARING_FILES` (`uv.lock`, `.netrc`, `.pypirc`, `pip.conf`, `pip.ini`) is tracked, or `uv.lock` is not gitignored. Symbols: `Finding`, `PUBLIC_INDEX_HOSTS`, `is_public`, `hosts_in`, `directive_value`, `scan_text`, `tracked_files`, `structural_findings`, `survey`, `main`. |
-| `synthetic_bench.py` | `just bench-synthetic [shape] [seed]` (`build`); `just bench-profile BUNDLE FLOW NAME` (`profile`) | `build` turns a shape under `tests/bench/shapes/` (`SHAPES`), `shapes/local/` (`LOCAL_SHAPES`) or a `.json` path into a published bundle with `sdmxlib.testing.synthetic_bundle` and prints the publication directory `just bench` opens. `profile` reads a real bundle's shape with `profile_bundle` into `tests/bench/shapes/local/NAME.json`. Symbols: `shape_to_json`, `shape_from_json`, `ShapeFileError`, `resolve_shape`, `build`, `profile`, `main`. |
+| `synthetic_bench.py` | `just bench-synthetic [shape] [seed]` (`build`); `just bench-profile EDITION FLOW NAME` (`profile`) | `build` turns a shape under `tests/bench/shapes/` (`SHAPES`), `shapes/local/` (`LOCAL_SHAPES`) or a `.json` path into a sealed edition with `sdmxlib.testing.synthetic_edition` and prints the edition directory `just bench` opens. `profile` reads a real edition's shape with `profile_edition` into `tests/bench/shapes/local/NAME.json`. Symbols: `shape_to_json`, `shape_from_json`, `ShapeFileError`, `resolve_shape`, `build`, `profile`, `main`. |
 
 ## Invariants
 
@@ -43,12 +43,12 @@ measurement behind its design; read it before changing the script.
   and treats pydoclint exit codes 0 and 1 as a run; any other exit code, or
   `uv` missing from `PATH`, exits 2 (`pydoclint_findings`).
 - `synthetic_bench.py build` reuses an output directory whose
-  `synthetic-bench.json` stamp matches the shape and seed, carries a `token`,
-  and names a publication directory that still exists. It deletes and
+  `synthetic-bench.json` stamp matches the shape and seed, carries an
+  `edition_id`, and names an edition directory that still exists. It deletes and
   rebuilds a directory whose stamp fails any of those tests, and raises `FileExistsError` for a non-empty directory
   with no stamp.
 - A profiled shape goes only to `tests/bench/shapes/local/`, which is
-  gitignored: a real bundle's codelist sizes and observation count identify
+  gitignored: a real edition's codelist sizes and observation count identify
   it.
 
 ## Side Effects
@@ -56,10 +56,11 @@ measurement behind its design; read it before changing the script.
 - `count_any.py --write` rewrites `tools/any_baseline.txt`.
 - `check_docstrings.py` runs `uv run pydoclint` as a subprocess;
   `check_indexes.py` runs `git ls-files` and `git check-ignore`.
-- `synthetic_bench.py build` writes a bundle (DuckDB metadata store, DuckLake
-  data and `bundle.manifest.json`) and its `synthetic-bench.json` stamp into
-  the output directory, under `.bench/` when run from `just bench-synthetic`,
-  and may delete that directory first. `profile` reads a bundle and writes
+- `synthetic_bench.py build` writes a product into the output directory: one
+  edition (`metadata.duckdb`, `tables.ducklake`, `manifest.json`), the
+  `data/` it reads and the `synthetic-bench.json` stamp. The output directory
+  is under `.bench/` when run from `just bench-synthetic`, and the tool may
+  delete it first. `profile` reads an edition and writes
   one JSON file.
 
 ## Verification

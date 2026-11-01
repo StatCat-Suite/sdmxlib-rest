@@ -5,7 +5,7 @@ fixed point in a request. Install a seam by passing it to the runtime:
 
 ```python
 runtime = CatalogRuntime(
-    BundleProvider("path/to/bundle"),
+    EditionProvider("path/to/<product>/<edition_id>"),
     structure_cache=MyStructureCache(),
     message_annotator=MyAnnotator(),
 )
@@ -17,7 +17,7 @@ service needed it, so each one below names the case it serves.
 
 ## `CatalogProvider`
 
-Opens the registry. [Serving a bundle](serving.md#the-provider) covers it.
+Opens the registry. [Serving an edition](serving.md#the-provider) covers it.
 
 ## `StructureCache`
 
@@ -36,7 +36,7 @@ class StructureCache(Protocol):
 `StructureQuery` holds the resolved request: structure type, agency, id,
 version after `latest` is resolved, `detail`, `references`, `Accept`,
 `Accept-Language` and `token`. The token is the runtime's `effective_token`,
-so a new publication or an annotation change misses every entry. The
+so a new edition or an annotation change misses every entry. The
 consumer decides what is worth keeping; a full codelist of 580,000 codes
 takes about 5 s to render and is the usual candidate.
 

@@ -3,7 +3,7 @@
 sdmxlib validates every message it writes and refuses content the target
 format cannot carry: a component with no `ConceptIdentity`, a metadataflow
 with no targets, a `MetadataSet` version that SDMX-JSON's semver pattern
-rejects. When a bundle carries such content, the route that writes it answers
+rejects. When an edition carries such content, the route that writes it answers
 500.
 
 ## The decision

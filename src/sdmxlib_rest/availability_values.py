@@ -3,7 +3,7 @@
 ``/availability`` answers in two steps — compute the per-component distinct
 value sets and the observation count, then render them. This seam sits between
 the two. A consumer that already has the values, because its producer baked them
-into the bundle or because it computed them once and kept them, hands them back
+into the edition or because it computed them once and kept them, hands them back
 and the scan never runs. The library renders the response either way, through
 `~sdmxlib_rest.responses.availability.render_availability`.
 
@@ -56,8 +56,8 @@ class AvailabilityKey:
     filename with ``Dataflow.urn_for(...)`` and get a matching key.
 
     Attributes:
-        token: Pins the entry to one publication of the bundle, so a
-            re-publish invalidates every slot without any bookkeeping.
+        token: Pins the entry to one edition, so a
+            new edition invalidates every slot without any bookkeeping.
         flow_urn: The resolved dataflow. Keying on the flow lets the 1.5 and
             2.2.2 surfaces share an entry, and keeps a forwarder's path shape
             from colliding two flows.

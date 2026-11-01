@@ -28,8 +28,8 @@ class StructureQuery:
     """The resolved structure request a cache keys on.
 
     ``version`` is post-``latest``-resolution and ``token`` is the runtime's
-    ``effective_token``: one publication of the bundle, with the annotator's
-    fingerprint folded in, so a re-publish or an annotation change invalidates
+    ``effective_token``: one edition, with the annotator's
+    fingerprint folded in, so a new edition or an annotation change invalidates
     every slot.
     """
 

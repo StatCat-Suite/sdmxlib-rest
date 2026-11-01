@@ -36,7 +36,7 @@ KEEP_ALL_ATTRIBUTE_KEYWORDS = frozenset({"all", "dsd", "dataset", "series", "obs
 KEEP_ALL_MEASURE_KEYWORDS = frozenset({"all"})
 
 # `attributes=msd` selects observations attached to referential metadata via a
-# MetadataStructure. Consumers whose bundle carries no MSD attachments can
+# MetadataStructure. Consumers whose edition carries no MSD attachments can
 # short-circuit to a header-only CSV and skip the observation scan.
 DROP_ALL_ATTRIBUTE_KEYWORDS = frozenset({"msd"})
 
@@ -259,7 +259,7 @@ def reject_unsupported_standard_params(
 ) -> None:
     """Return 501 if the caller asked for a SDMX-REST 2.2.2 param this server won't implement.
 
-    Consumers backed by a single static bundle have no version history and no
+    Consumers backed by a single static edition have no version history and no
     fiscal-period semantics, so these three can never be implemented for
     them.
     """
@@ -278,6 +278,6 @@ def reject_unsupported_standard_params(
             detail=(
                 f"query parameter(s) {unsupported!r} are valid SDMX-REST 2.2.2 surface "
                 "but permanently not implemented by this server "
-                "(single static bundle; no version history)."
+                "(single static edition; no version history)."
             ),
         )

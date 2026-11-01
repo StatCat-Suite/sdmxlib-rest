@@ -3,7 +3,7 @@
 What matters to a consumer is that an overlay changes what every wire format
 serves, that swapping overlays on a running deployment changes the response
 and its ETag, and that the key the runtime computes is the one sdmxlib defines
-for a bundle with overlays, so a cache shared with other sdmxlib tooling agrees.
+for an edition with overlays, so a cache shared with other sdmxlib tooling agrees.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import msgspec
 import pytest
 import sdmxlib as sl
 from fastapi.testclient import TestClient
-from sdmxlib.bundle import (
+from sdmxlib.edition import (
     OVERLAY_FORMAT,
     MergeHook,
     Overlay,
@@ -25,7 +25,7 @@ from sdmxlib.bundle import (
     OverlayText,
     effective_token,
 )
-from sdmxlib.testing import Dim, Shape, synthetic_bundle
+from sdmxlib.testing import Dim, Shape, synthetic_edition
 
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.message_annotator import NullMessageAnnotator
@@ -166,7 +166,7 @@ def test_an_audience_applies_its_own_entries_and_the_unscoped_ones(world: World)
 
 
 def test_an_overlay_that_changes_a_name_is_refused() -> None:
-    """sdmxlib applies name and description texts only in fold_overlays, into a new publication."""
+    """sdmxlib applies name and description texts only in fold_overlays, into a new edition."""
     renamed = Overlay(
         format_version=OVERLAY_FORMAT,
         id="rename",
@@ -181,12 +181,12 @@ def test_an_overlay_that_changes_a_name_is_refused() -> None:
     assert [o.id for o in annotator.overlays] == ["display"]
 
 
-class _Published:
-    def __init__(self, publication: Path) -> None:
-        self._publication = publication
+class _EditionProvider:
+    def __init__(self, edition: Path) -> None:
+        self._edition = edition
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._publication)
+        registry = sl.LocalRegistry.edition(self._edition)
         return OpenedCatalog(registry=registry, meta_conn=registry.connection, on_close=registry.close)
 
 
@@ -198,18 +198,18 @@ class _Published:
 def test_the_runtime_keys_on_sdmxlibs_effective_token(
     tmp_path: Path, merge: dict[str, MergeHook] | None, audience: str | None
 ) -> None:
-    """The same key sdmxlib defines for a bundle with overlays, hooks and an audience, to the character."""
-    root = tmp_path / "bundle"
-    manifest = synthetic_bundle(root, Shape(dimensions=(Dim(codes=4),), observations=8, periods=2))
+    """The same key sdmxlib defines for an edition with overlays, hooks and an audience, to the character."""
+    root = tmp_path / "product"
+    manifest = synthetic_edition(root, Shape(dimensions=(Dim(codes=4),), observations=8, periods=2))
     overlays = (
         _overlay("a", selector="*", overlay_id="one"),
         _overlay("b", selector="Codelist", overlay_id="two", scope="public"),
     )
     annotator = OverlayAnnotator(overlays=overlays, merge=merge, audience=audience)
-    runtime = CatalogRuntime(_Published(root / manifest.token), message_annotator=annotator)
+    runtime = CatalogRuntime(_EditionProvider(root / manifest.edition_id), message_annotator=annotator)
     runtime.ensure_open()
     try:
-        assert runtime.token == manifest.token
+        assert runtime.token == manifest.edition_id
         assert runtime.effective_token == effective_token(manifest, overlays, merge=merge, audience=audience)
     finally:
         runtime.close()

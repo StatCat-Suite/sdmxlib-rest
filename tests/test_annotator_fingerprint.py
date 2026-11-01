@@ -1,7 +1,7 @@
 """An annotator's fingerprint feeds the structure cache and the ETag (GH-2).
 
 A consumer can change annotations on a running deployment, an overlay edited
-without rebuilding the bundle, by having its `MessageAnnotator` implement
+without rebuilding the edition, by having its `MessageAnnotator` implement
 `SupportsFingerprint`. The token alone does not move then, so without the
 fingerprint a cached response kept the old annotations and a revalidating
 client got a 304 for them.
@@ -60,7 +60,7 @@ class _Overlay:
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,
+        registry: sl.EditionRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -72,7 +72,7 @@ class _Overlay:
 
 
 class _Plain:
-    """An annotator with no fingerprint: its output depends on the bundle alone."""
+    """An annotator with no fingerprint: its output depends on the edition alone."""
 
     def __init__(self, name: str = "", log: list[str] | None = None) -> None:
         self.name = name
@@ -82,7 +82,7 @@ class _Plain:
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,
+        registry: sl.EditionRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -182,12 +182,12 @@ def test_a_fingerprint_change_misses_the_structure_cache(client: TestClient, ove
 
 
 def test_the_annotator_is_handed_the_bare_token(client: TestClient, world: World, overlay: _Overlay) -> None:
-    """It memoises per publication; folding its own fingerprint in would defeat that."""
+    """It memoises per edition; folding its own fingerprint in would defeat that."""
     client.get(_FLOW)
     overlay.version = "v2"
     client.get(_FLOW)
 
-    assert overlay.applied == [world.manifest.token, world.manifest.token]
+    assert overlay.applied == [world.manifest.edition_id, world.manifest.edition_id]
 
 
 def test_availability_keys_ignore_the_fingerprint(world: World, overlay: _Overlay) -> None:
@@ -198,7 +198,7 @@ def test_availability_keys_ignore_the_fingerprint(world: World, overlay: _Overla
         overlay.version = "v2"
         client.get(_AVAILABILITY)
 
-    assert values.tokens == [world.manifest.token, world.manifest.token]
+    assert values.tokens == [world.manifest.edition_id, world.manifest.edition_id]
 
 
 def test_last_modified_moves_with_the_fingerprint(client: TestClient, overlay: _Overlay) -> None:
@@ -235,8 +235,8 @@ def test_the_effective_token_is_the_token_until_there_is_a_fingerprint(world: Wo
     fingerprinted = _runtime(world, overlay)
     fingerprinted.ensure_open()
 
-    assert plain.effective_token == plain.token == world.manifest.token
-    assert fingerprinted.effective_token not in {"", world.manifest.token}
+    assert plain.effective_token == plain.token == world.manifest.edition_id
+    assert fingerprinted.effective_token not in {"", world.manifest.edition_id}
 
 
 def test_a_composite_joins_its_members_fingerprints(overlay: _Overlay) -> None:

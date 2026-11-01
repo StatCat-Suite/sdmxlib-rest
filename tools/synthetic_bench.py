@@ -1,21 +1,21 @@
-"""Build a synthetic bundle for the bench tier, or profile a real bundle's shape.
+"""Build a synthetic edition for the bench tier, or profile a real edition's shape.
 
-`just bench` needs a bundle directory, and a real one holds data that cannot
-leave the machine it is on. sdmxlib 0.72 can stand one in:
-`sdmxlib.testing.synthetic_bundle` builds a conforming, published bundle of a
-given `Shape` from a seed, and `profile_bundle` reads that shape off a real
-bundle — counts and fan-outs, never codes, names or values (GH-37).
+`just bench` needs an edition directory, and a real one holds data that cannot
+leave the machine it is on. sdmxlib can stand one in:
+`sdmxlib.testing.synthetic_edition` builds a conforming, sealed edition of a
+given `Shape` from a seed, and `profile_edition` reads that shape off a real
+edition — counts and fan-outs, never codes, names or values (GH-37).
 
 A shape is a small JSON file. `tests/bench/shapes/` holds the committed ones,
 chosen by hand. A profiled shape goes in `tests/bench/shapes/local/`, which is
-gitignored: a real bundle's codelist sizes and observation count identify it,
+gitignored: a real edition's codelist sizes and observation count identify it,
 so they stay on the machine that holds it.
 
 ## Usage
 
     uv run python tools/synthetic_bench.py build large .bench/synthetic-large-1
     uv run python tools/synthetic_bench.py build path/to/shape.json DIR --seed 7
-    uv run python tools/synthetic_bench.py profile BUNDLE FLOW_URN NAME
+    uv run python tools/synthetic_bench.py profile EDITION FLOW_URN NAME
 
 `build` reuses a directory it built before from the same shape and seed, and
 refuses any other non-empty one. `profile` writes
@@ -31,12 +31,12 @@ from pathlib import Path
 from typing import cast
 
 import sdmxlib as sl
-from sdmxlib.testing import Dim, Shape, profile_bundle, synthetic_bundle
+from sdmxlib.testing import Dim, Shape, profile_edition, synthetic_edition
 
 _ROOT = Path(__file__).resolve().parent.parent
 SHAPES = _ROOT / "tests" / "bench" / "shapes"
 LOCAL_SHAPES = SHAPES / "local"
-#: Written beside a built bundle, so a rerun can tell its own output from
+#: Written beside a built edition, so a rerun can tell its own output from
 #: anything else in the directory.
 _STAMP = "synthetic-bench.json"
 
@@ -131,39 +131,39 @@ def resolve_shape(name: str) -> Path:
 
 
 def build(shape_file: Path, out: Path, seed: int) -> tuple[Path, bool]:
-    """Build the synthetic bundle into `out`, or reuse the one already there.
+    """Build the synthetic edition into `out`, or reuse the one already there.
 
     Args:
         shape_file: The shape to build.
-        out: The bundle directory.
-        seed: The seed `synthetic_bundle` draws from.
+        out: The product directory, which holds the edition.
+        seed: The seed `synthetic_edition` draws from.
 
     Returns:
-        The publication directory, which `just bench` opens, and whether this
+        The edition directory, which `just bench` opens, and whether this
         call built it.
 
     Raises:
-        FileExistsError: If `out` holds anything but this shape and seed's bundle.
+        FileExistsError: If `out` holds anything but this shape and seed's edition.
     """
     wanted = {"shape": json.loads(shape_file.read_text(encoding="utf-8")), "seed": seed}
     stamp_path = out / _STAMP
     if stamp_path.is_file():
         stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
-        token = stamp.pop("token", None)
-        if stamp == wanted and token is not None and (out / token).is_dir():
-            return out / token, False
+        edition_id = stamp.pop("edition_id", None)
+        if stamp == wanted and edition_id is not None and (out / edition_id).is_dir():
+            return out / edition_id, False
         shutil.rmtree(out)
     elif out.exists() and any(out.iterdir()):
         msg = f"{out} is not empty and was not built by this tool"
         raise FileExistsError(msg)
-    manifest = synthetic_bundle(out, shape_from_json(wanted["shape"]), seed=seed)
-    stamp_path.write_text(json.dumps({**wanted, "token": manifest.token}, indent=2) + "\n", encoding="utf-8")
-    return out / manifest.token, True
+    manifest = synthetic_edition(out, shape_from_json(wanted["shape"]), seed=seed)
+    stamp_path.write_text(json.dumps({**wanted, "edition_id": manifest.edition_id}, indent=2) + "\n", encoding="utf-8")
+    return out / manifest.edition_id, True
 
 
-def profile(bundle: Path, flow: str, name: str) -> Path:
-    """Profile `flow` in `bundle` into the gitignored local shapes; return the file."""
-    shape = profile_bundle(bundle, sl.Dataflow.parse_urn(flow))
+def profile(edition: Path, flow: str, name: str) -> Path:
+    """Profile `flow` in `edition` into the gitignored local shapes; return the file."""
+    shape = profile_edition(edition, sl.Dataflow.parse_urn(flow))
     LOCAL_SHAPES.mkdir(parents=True, exist_ok=True)
     path = LOCAL_SHAPES / f"{name}.json"
     path.write_text(json.dumps(shape_to_json(shape), indent=2) + "\n", encoding="utf-8")
@@ -174,12 +174,12 @@ def main() -> int:
     """Run `build` or `profile`, per the arguments."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
-    b = commands.add_parser("build", help="build a synthetic bundle from a shape")
+    b = commands.add_parser("build", help="build a synthetic edition from a shape")
     b.add_argument("shape", help="a shape name under tests/bench/shapes[/local], or a .json path")
-    b.add_argument("out", type=Path, help="the bundle directory to build")
+    b.add_argument("out", type=Path, help="the product directory to build the edition in")
     b.add_argument("--seed", type=int, default=1)
-    p = commands.add_parser("profile", help="write a real bundle's shape to tests/bench/shapes/local/")
-    p.add_argument("bundle", type=Path)
+    p = commands.add_parser("profile", help="write a real edition's shape to tests/bench/shapes/local/")
+    p.add_argument("edition", type=Path)
     p.add_argument("flow", help="the dataflow URN to profile")
     p.add_argument("name", help="the shape file's stem")
     args = parser.parse_args()
@@ -187,17 +187,17 @@ def main() -> int:
     if args.command == "build":
         shape_file = resolve_shape(args.shape)
         started = time.perf_counter()
-        publication, built = build(shape_file, args.out, args.seed)
-        # The publication path alone on stdout, for `just bench-synthetic` to pass on.
+        edition, built = build(shape_file, args.out, args.seed)
+        # The edition path alone on stdout, for `just bench-synthetic` to pass on.
         if built:
             elapsed = time.perf_counter() - started
             print(f"built {args.out} from {shape_file.name}, seed {args.seed}, in {elapsed:.1f} s", file=sys.stderr)
         else:
             print(f"reusing {args.out} ({shape_file.name}, seed {args.seed})", file=sys.stderr)
-        print(publication)
+        print(edition)
         return 0
-    path = profile(args.bundle, args.flow, args.name)
-    print(f"wrote {path} (gitignored: it describes a real bundle)")
+    path = profile(args.edition, args.flow, args.name)
+    print(f"wrote {path} (gitignored: it describes a real edition)")
     return 0
 
 

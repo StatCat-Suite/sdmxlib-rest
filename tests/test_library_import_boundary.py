@@ -1,8 +1,8 @@
-"""The library never imports the catalog library a consumer opens bundles with.
+"""The library never imports the catalog library a consumer opens editions with.
 
 ``sdmxlib_rest`` reaches a catalog only through the ``CatalogProvider`` seam.
 statcatlib (formerly pinax, published as pinaxlib) is one way a consumer opens
-a bundle, so it is installed next to this package in practice, and an import
+an edition, so it is installed next to this package in practice, and an import
 of it would work everywhere it is tested. That is exactly why it needs a test:
 nothing else would notice.
 

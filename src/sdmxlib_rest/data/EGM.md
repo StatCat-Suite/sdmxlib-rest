@@ -107,7 +107,7 @@ logic. The helpers that map SDMX component ids to physical columns take an
   `binding.dimension_column_map`; it never forces materialisation.
 - `key_dimension_ids` memoises per registry and flow URN in
   `_KEY_DIM_IDS_CACHE`, a `weakref.WeakKeyDictionary` keyed on the registry,
-  so a reopened bundle starts with an empty cache.
+  so a reopened edition starts with an empty cache.
 - `project_binding` never trims `dimension_column_map`, and returns the input
   binding unchanged when both parameters resolve to keep-all.
 - `emit_csv_with_labels` writes the header line exactly once, also for an
@@ -149,6 +149,6 @@ logic. The helpers that map SDMX component ids to physical columns take an
   `tests/test_key_slots.py` covers `key_dimension_ids` slot order.
   `tests/test_availability_routes.py` exercises `parse_c_params`, the id
   patterns and `key_dimension_ids` through `/availability`.
-- `just bench <bundle-dir>` and `just bench-synthetic` measure `/availability`
+- `just bench <edition-dir>` and `just bench-synthetic` measure `/availability`
   query cost (`tests/bench/`), which calls `key_dimension_ids` per request.
   No benchmark covers the encoders.

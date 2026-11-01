@@ -112,10 +112,10 @@ def _side_flow(registry: sl.LocalRegistry) -> None:
 
 @contextmanager
 def _client(*, fan: int = 1, **runtime: Any) -> Generator[TestClient]:
-    # sdmxlib's write_manifest counts each binding's observations, so it
-    # refuses a fan-out sidecar at publish; a provider can still serve one
-    # from a store it opens unpublished, and the route must refuse it there.
-    world = build_world(extra_lake=_sidecar(fan), extra=_side_flow, publish=fan == 1)
+    # sdmxlib's seal counts each binding's observations, so it
+    # refuses a fan-out sidecar at the seal; a provider can still serve one
+    # from an unsealed edition it opens, and the route must refuse it there.
+    world = build_world(extra_lake=_sidecar(fan), extra=_side_flow, sealed=fan == 1)
     app = create_app(
         CatalogRuntime(_WorldProvider(world), **runtime),
         RestSettings(title="test-sdmx-api", version="0.1.0"),

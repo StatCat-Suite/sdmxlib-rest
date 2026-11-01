@@ -29,9 +29,9 @@ htmlcov/
 # Claude Code: per-developer permission grants.
 .claude/settings.local.json
 
-# Synthetic bench bundles (`just bench-synthetic`), rebuilt from a shape and seed.
+# Synthetic bench editions (`just bench-synthetic`), rebuilt from a shape and seed.
 .bench/
-# Shapes profiled from real bundles (`just bench-profile`): a real bundle's
+# Shapes profiled from real editions (`just bench-profile`): a real edition's
 # codelist sizes and observation count identify it, so they stay local.
 tests/bench/shapes/local/
 # `just docs-build` output.

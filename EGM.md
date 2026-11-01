@@ -2,18 +2,18 @@
 
 ## System Overview
 
-sdmxlib-rest serves an sdmxlib `BundleRegistry` over SDMX-REST 2.2.2 as a
+sdmxlib-rest serves an sdmxlib `EditionRegistry` over SDMX-REST 2.2.2 as a
 FastAPI application. It owns the parts of an SDMX-REST service that are the
 same for every catalog: URL grammar, content negotiation, `Accept-Language`
 localisation, conditional GET and ETags, compression, streaming and response
-assembly. Everything that knows a particular bundle, lake layout, agency,
+assembly. Everything that knows a particular product, lake layout, agency,
 codelist or vendor parameter belongs to the consumer, behind a seam: a
 Protocol carried on `CatalogRuntime` with an inert default. The library
 serves `/structure`, `/metadata` and `/availability`; a consumer writes its
 own `/data` route from the helpers in `sdmxlib_rest.data`.
 
 The repository holds one distribution, `sdmxlib-rest`, built from
-`pyproject.toml` and pinned to `sdmxlib>=0.74,<0.75`. `README.md` is the user
+`pyproject.toml` and pinned to `sdmxlib>=0.80,<0.81`. `README.md` is the user
 guide and PyPI description; `CLAUDE.md` holds the project's working rules,
 the seams table and the writing style; `docs/` and `mkdocs.yml` build the
 docs site, whose guide pages restate the behaviour of the seams, the routes
@@ -32,7 +32,7 @@ cache keys, and unwritable content. `CHANGELOG.md` is the release record.
   [`data/`](./src/sdmxlib_rest/data/EGM.md).
 - tools: [`./tools/EGM.md`](./tools/EGM.md) - repository gates run from the
   justfile (docstring style, prose style, the `Any` ratchet, the
-  package-index allow-list) and the synthetic-bundle builder for the bench
+  package-index allow-list) and the synthetic-edition builder for the bench
   tier. Nothing here is imported by the package.
 
 `tests/` (including the bench tier in `tests/bench/`) and `docs/` carry no
@@ -68,7 +68,7 @@ contract: EGM's own rules exclude test directories, and `.egmignore` lists
   `tests/test_library_create_app.py` pins it; its docstring gives each
   adjacency's reason.
 - Caches, splices and the ETag key on `CatalogRuntime.effective_token` (the
-  publication token with the annotator fingerprint folded in);
+  edition's token with the annotator fingerprint folded in);
   `AvailabilityKey` keys on the bare `token`.
 - Each suite dependency is capped below its next minor while it is pre-1.0
   (`pyproject.toml`). Breaking a seam Protocol is a minor bump before 1.0.
@@ -85,7 +85,7 @@ contract: EGM's own rules exclude test directories, and `.egmignore` lists
   process-wide by `install_isal_zip_backend`.
 - One perf record per request to the consumer's `perf_sink`, and loguru log
   lines.
-- `just bench-synthetic` writes synthetic bundles under `.bench/`;
+- `just bench-synthetic` writes synthetic editions under `.bench/`;
   `just bench-profile` writes shapes under `tests/bench/shapes/local/`.
 
 ## System Verification
@@ -97,5 +97,5 @@ contract: EGM's own rules exclude test directories, and `.egmignore` lists
   are `ci.yml` (`just check` and `just docs-build`, `just test`, and the unit
   tests at every direct dependency's floor), `docs.yml` (deploys the site)
   and `bench.yml` (on demand and on pull requests that touch the bench).
-- Performance: `just bench <bundle-dir>` against a real publication, or
+- Performance: `just bench <edition-dir>` against a real edition, or
   `just bench-synthetic [large|census]`.

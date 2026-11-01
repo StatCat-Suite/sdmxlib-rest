@@ -98,7 +98,7 @@ plugins:
 nav:
   - Overview: index.md
   - Guide:
-      - Serving a bundle: serving.md
+      - Serving an edition: serving.md
       - Seams: seams.md
       - Annotations and overlays: annotations.md
       - HTTP behaviour: http.md

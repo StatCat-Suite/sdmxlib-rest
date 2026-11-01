@@ -8,7 +8,7 @@ the same for every catalog.
 ## The rule
 
 The library holds no catalog-specific logic. Code that needs to know about a
-particular bundle, lake layout, agency, codelist or vendor parameter belongs
+particular product, lake layout, agency, codelist or vendor parameter belongs
 in the consumer. The library defines a Protocol for it and ships an inert
 default.
 
@@ -35,7 +35,7 @@ A proposal for a new seam names the service that needs it and the code that
 service would delete.
 
 `CatalogProvider` is the one seam that names a concrete type. It returns an
-`sl.BundleRegistry`, the read-only registry `LocalRegistry.bundle` opens,
+`sl.EditionRegistry`, the read-only registry `LocalRegistry.edition` opens,
 because the binding-driven data-plane helpers need `binding_for`, and
 `binding_for` exists only on that class. No sdmxlib Protocol covers it.
 

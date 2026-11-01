@@ -1,9 +1,9 @@
 """The reference-metadata store seam.
 
 The ``/metadata/*`` routes need to answer "which MetadataSets are attached to
-this structural artefact / metadataflow?" — a lookup over the bundle's
+this structural artefact / metadataflow?" — a lookup over the edition's
 referential-metadata linkage. The consumer decides how that linkage is
-stored (a consumer's bundle keeps it in its own DuckDB tables); the library
+stored (a consumer's edition keeps it in its own DuckDB tables); the library
 needs only the set URNs back, which it then materialises through the catalog like any
 other artefact.
 

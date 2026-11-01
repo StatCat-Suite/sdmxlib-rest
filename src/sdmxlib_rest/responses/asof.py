@@ -7,7 +7,7 @@ that don't ship a temporal history layer should return ``501`` to make
 the gap visible to clients (vs FastAPI's silent 422 on an unknown
 query param).
 
-This service runs from a single immutable bundle per process, identified
+This service runs from a single immutable edition per process, identified
 by ``build_id``. There's no history layer — point-in-time queries
 aren't meaningful. The structure and metadata routes declare `AsOf` and
 call `reject_asof`, which surfaces the 501 to a strict client and
@@ -30,7 +30,7 @@ AsOf = Annotated[
         alias="asOf",
         description=(
             "SDMX-REST 2.2.2 — time-travel query. Not implemented: this service runs from a "
-            "single immutable bundle (`build_id`) per process and has no history layer, so any "
+            "single immutable edition (`build_id`) per process and has no history layer, so any "
             "non-null `asOf` returns `501`. The parameter is declared so clients can "
             "learn from OpenAPI that time-travel queries are unsupported."
         ),
@@ -45,7 +45,7 @@ def reject_asof(value: str | None) -> None:
             status_code=501,
             detail=(
                 "asOf is a SDMX-REST 2.2.2 parameter but not implemented: this service runs "
-                "from a single immutable bundle per process and has no history layer. Point-in-time "
+                "from a single immutable edition per process and has no history layer. Point-in-time "
                 "queries are out of scope."
             ),
         )

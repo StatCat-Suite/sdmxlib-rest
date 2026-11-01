@@ -1,4 +1,4 @@
-"""Tests for `tools/synthetic_bench.py` — the synthetic bundle tier (GH-37).
+"""Tests for `tools/synthetic_bench.py` — the synthetic edition tier (GH-37).
 
 The bench itself only runs on demand, so these cover what would break it
 quietly: a committed shape that no longer parses, and a `build` that rebuilds
@@ -83,22 +83,22 @@ def test_a_missing_key_is_named() -> None:
         synthetic_bench.shape_from_json(data)
 
 
-def test_build_reuses_its_own_bundle_and_rebuilds_for_a_new_seed(tmp_path: Path) -> None:
+def test_build_reuses_its_own_edition_and_rebuilds_for_a_new_seed(tmp_path: Path) -> None:
     shape_file = _shape_file(tmp_path, _TINY)
-    out = tmp_path / "bundle"
+    out = tmp_path / "product"
 
-    publication, built = synthetic_bench.build(shape_file, out, seed=1)
+    edition, built = synthetic_bench.build(shape_file, out, seed=1)
     assert built
-    assert publication.parent == out
-    assert (publication / "bundle.manifest.json").is_file()
-    assert synthetic_bench.build(shape_file, out, seed=1) == (publication, False)
+    assert edition.parent == out
+    assert (edition / "manifest.json").is_file()
+    assert synthetic_bench.build(shape_file, out, seed=1) == (edition, False)
     rebuilt, built = synthetic_bench.build(shape_file, out, seed=2)
     assert built
-    assert rebuilt != publication
+    assert rebuilt != edition
 
 
 def test_build_refuses_a_directory_it_did_not_create(tmp_path: Path) -> None:
-    out = tmp_path / "bundle"
+    out = tmp_path / "product"
     out.mkdir()
     (out / "keep.txt").write_text("not ours", encoding="utf-8")
 
