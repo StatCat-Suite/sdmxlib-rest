@@ -1,10 +1,10 @@
-"""What the structure routes cost on a bundle with one very large codelist, as ratios.
+"""What the structure routes cost on an edition with one very large codelist, as ratios.
 
-The availability tier measures the lake. This one serves the bundle through the
+The availability tier measures the lake. This one serves the edition through the
 library's own app and times requests for its largest codelist, the case a
 geography dimension of hundreds of thousands of codes makes expensive: a full
 codelist is a body of about 100 MB, and a stub of it must not read a single
-code. ``just bench-synthetic census`` builds such a bundle, modelled on the
+code. ``just bench-synthetic census`` builds such an edition, modelled on the
 public 2021 Census Profile: a ~580k-code six-level geography, a ~2.6k-code
 nine-level characteristic list, names in English and French.
 
@@ -20,8 +20,8 @@ codelist in French vs English                   5.4 s vs 5.4 s
 codelist in SDMX-ML 3.0 vs SDMX-JSON 2.0        5.9 s vs 5.4 s
 ==============================================  ===========================
 
-``LocalRegistry.bundle`` opens the publication read-only, so this tier can run
-beside a service holding the same bundle.
+``LocalRegistry.edition`` opens the edition read-only, so this tier can run
+beside a service holding the same edition.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ from sdmxlib_rest.runtime import CatalogRuntime
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-pytestmark = pytest.mark.bundle
+pytestmark = pytest.mark.edition
 
 _REPEATS = 2
 _JSON = {"Accept": "application/vnd.sdmx.structure+json;version=2.0.0"}
@@ -55,11 +55,11 @@ _LARGE = 50_000
 
 @frozen
 class Served:
-    """The bundle behind the library app, and the largest codelist it holds.
+    """The edition behind the library app, and the largest codelist it holds.
 
     Attributes:
         client: A `TestClient` over the library app, catalog open.
-        codelist: The path of the bundle's largest codelist.
+        codelist: The path of the edition's largest codelist.
         codes: How many codes it has.
         dataflow: The path of a dataflow whose structure references it.
     """
@@ -75,7 +75,7 @@ class _Provider:
         self._root = root
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._root)
+        registry = sl.LocalRegistry.edition(self._root)
         return OpenedCatalog(registry=registry, meta_conn=registry.connection, on_close=registry.close)
 
 
@@ -85,12 +85,12 @@ def _path(kind: str, artefact: sl.MaintainableArtefact) -> str:
 
 @pytest.fixture(scope="module")
 def served() -> Iterator[Served]:
-    path = os.environ.get("SDMXLIB_REST_BENCH_BUNDLE")
+    path = os.environ.get("SDMXLIB_REST_BENCH_EDITION")
     if not path:
-        pytest.skip("set SDMXLIB_REST_BENCH_BUNDLE to a publication directory to run the bundle tier")
+        pytest.skip("set SDMXLIB_REST_BENCH_EDITION to an edition directory to run the edition tier")
     root = Path(path)
-    if not (root / "meta.duckdb").is_file():
-        pytest.skip(f"{root} has no meta.duckdb")
+    if not (root / "metadata.duckdb").is_file():
+        pytest.skip(f"{root} has no metadata.duckdb")
     runtime = CatalogRuntime(_Provider(root))
     app = create_app(runtime, RestSettings(title="bench", version="0"), routers=list(library_routers()))
     with TestClient(app) as client:

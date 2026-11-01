@@ -156,7 +156,7 @@ def _distinct(query: sl.ObsQuery, component_id: str) -> frozenset[str]:
     return frozenset(str(v) for v in frame.to_series() if v is not None)
 
 
-def _observations(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.ObsQuery:
+def _observations(registry: sl.EditionRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> sl.ObsQuery:
     """The flow's observations, or a 500 naming why they cannot be read.
 
     sdmxlib refuses a series-attributes sidecar with more than one row per join
@@ -170,16 +170,16 @@ def _observations(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]
         raise HTTPException(status_code=500, detail=f"cannot answer availability for {flow_urn}: {exc}") from exc
 
 
-def _time_dimension_id(registry: sl.BundleRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str:
+def _time_dimension_id(registry: sl.EditionRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str:
     """The DSD's time dimension, which ``startPeriod`` / ``endPeriod`` bound."""
     dsd = registry.dsd(flow_urn)
     time_dimension = dsd.time_dimension if dsd is not None else None
     return time_dimension.id if time_dimension is not None else "TIME_PERIOD"
 
 
-# `all` expands to the artefact-type tokens we can actually source from the bundle.
+# `all` expands to the artefact-type tokens we can actually source from the edition.
 # `dataproviderscheme` + `valuelist` are accepted at the boundary but produce empty
-# collections — the bundle ships none.
+# collections — the edition ships none.
 
 
 def reject_unsupported_standard_params(
@@ -261,7 +261,7 @@ _STRUCTURE_200_CONTENT: dict[int | str, dict[str, Any]] = {
 )
 async def get_availability(  # noqa: C901, PLR0912, PLR0915
     request: Request,
-    registry: Annotated[sl.BundleRegistry, Depends(get_registry)],
+    registry: Annotated[sl.EditionRegistry, Depends(get_registry)],
     conn: Annotated[duckdb.DuckDBPyConnection, Depends(get_meta_conn)],
     token: Annotated[str, Depends(get_token)],
     availability_values: Annotated[AvailabilityValues, Depends(get_availability_values)],
@@ -350,7 +350,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
                 "include alongside the synthesised constraint. Honoured values: "
                 "`none` (default), `all`, `datastructure`, `dataflow`, `codelist`, "
                 "`conceptscheme`. `dataproviderscheme` / `valuelist` are accepted but yield "
-                "empty collections (this bundle has none). For non-`none` values we walk the "
+                "empty collections (this edition has none). For non-`none` values we walk the "
                 "dataflow's DSD and stub each referenced artefact — the constraint stays "
                 "the canonical payload; the extras let clients render dimension labels + "
                 "concept names without a second round-trip."
@@ -383,7 +383,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
         Query(
             description=(
                 "SDMX-REST: return only values whose data changed since this timestamp. "
-                "Permanently not implemented — our bundle is static; presence returns `501`."
+                "Permanently not implemented — our edition is static; presence returns `501`."
             ),
         ),
     ] = None,
@@ -477,7 +477,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     # equivalent is `c[TIME_PERIOD]=ge:<v>+le:<v>`. We accept both forms on
     # /availability to match /data — strict 2.2.2 clients should
     # prefer the c[] form.
-    # Resolved only when a bound is given: a DSD read is ~15 ms on a large census bundle
+    # Resolved only when a bound is given: a DSD read is ~15 ms on a large census edition
     # and most requests carry no period bound.
     has_bounds = start_period is not None or end_period is not None
     periods = (_time_dimension_id(registry, flow_urn) if has_bounds else "", start_period, end_period)
@@ -510,7 +510,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     # COUNT as one aggregate in a single scan (`agg` + `sl.len()`, sdmxlib#414),
     # and on DuckDB 2 that beats the per-dimension loop filtered or not.
     #
-    # Unfiltered, measured on a ~500M-row, 6-dimension census bundle, warm,
+    # Unfiltered, measured on a ~500M-row, 6-dimension census edition, warm,
     # loop vs combined, best-of-2 (tests/bench/test_availability_sql.py, GH-36):
     #
     #   DuckDB 1.5.6, macOS           4.54 s vs 12.56 s   combined loses 2.8x
@@ -525,10 +525,10 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     #   c[REF_AREA]=<one code>        0.11 s vs  0.04 s   combined wins  2.4x
     #
     # The unfiltered margin is thin and depends on row count: on a synthetic
-    # bundle with the same 580k-code geography and 20M rows the loop usually
+    # edition with the same 580k-code geography and 20M rows the loop usually
     # wins, by 1.2-2x, because building the per-dimension arrays outweighs the
     # scans saved. Both take under half a second there.
-    # Re-measure on a large bundle before reverting.
+    # Re-measure on a large edition before reverting.
     #
     # ``mode=available`` relaxes one constraint per per-dimension query, so each
     # aggregate would need its own WHERE and cannot share the combined scan —

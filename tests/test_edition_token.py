@@ -1,10 +1,10 @@
-"""Caches and the ETag key on the publication, not on the build id.
+"""Caches and the ETag key on the edition, not on the build id.
 
 A producer may keep ``build_id`` across a metadata-only rebuild, so keying on
-it served the old body after a republish, and a revalidating client got a 304
-for it. sdmxlib's bundle manifest mints a fresh ``token`` at every publication;
+it served the old body after a new edition, and a revalidating client got a
+304 for it. Every sdmxlib edition has a new ``edition_id`` in its manifest;
 the runtime keys on that whenever the registry has one, and on ``build_id``
-otherwise. Every published bundle has a manifest, so the ``build_id`` case is a
+otherwise. Every sealed edition has a manifest, so the ``build_id`` case is a
 plain store a provider opens itself.
 """
 
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import pytest
 import sdmxlib as sl
 from fastapi.testclient import TestClient
-from sdmxlib.bundle import Manifest, Producer, read_manifest, write_manifest
+from sdmxlib.edition import Manifest, Producer, read_manifest, seal
 
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.provider import OpenedCatalog
@@ -40,17 +40,17 @@ _CHOSEN = "provider-chosen"
 
 
 class _Provider:
-    """Opens a publication with a fixed ``build_id``, as a producer would keep it."""
+    """Opens an edition with a fixed ``build_id``, as a producer would keep it."""
 
     def __init__(
-        self, publication: Path, token: str = "", opener: Callable[[Path], sl.BundleRegistry] | None = None
+        self, edition: Path, token: str = "", opener: Callable[[Path], sl.EditionRegistry] | None = None
     ) -> None:
-        self._publication = publication
+        self._edition = edition
         self._token = token
-        self._opener = opener or sl.LocalRegistry.bundle
+        self._opener = opener or sl.LocalRegistry.edition
 
     def open(self) -> OpenedCatalog:
-        registry = self._opener(self._publication)
+        registry = self._opener(self._edition)
         return OpenedCatalog(
             registry=registry,
             meta_conn=registry.connection,
@@ -76,23 +76,23 @@ class _RecordingCache:
 
 
 @pytest.fixture
-def bundle() -> Path:
-    """The conftest world's publication, closed."""
+def edition() -> Path:
+    """The conftest world's edition, closed."""
     world = build_world()
     world.registry.close()
     return world.registry.uri.parent
 
 
-def _republish(publication: Path) -> Path:
-    """A new publication extending `publication`, with nothing changed: the same content, a new token."""
-    with sl.LocalRegistry.build(publication.parent, previous=publication.name) as builder:
-        new = builder.publication
-    write_manifest(new, bundle_id="test", producer=Producer(name="tests", version="0"))
+def _next_edition(edition: Path) -> Path:
+    """A new edition extending `edition`, with nothing changed: the same content, a new edition id."""
+    with sl.LocalRegistry.build(edition.parent, previous=edition.name) as builder:
+        new = builder.edition_dir
+    seal(new, product_id="test", producer=Producer(name="tests", version="0"))
     return new
 
 
-def _manifest(publication: Path) -> Manifest:
-    return read_manifest(publication)
+def _manifest(edition: Path) -> Manifest:
+    return read_manifest(edition)
 
 
 @contextmanager
@@ -111,40 +111,40 @@ def _get(root: Path, headers: dict[str, str] | None = None) -> tuple[dict[str, s
     return dict(response.headers), response.status_code
 
 
-def test_a_republish_with_the_same_build_id_changes_the_etag(bundle: Path) -> None:
-    first, _ = _get(bundle)
-    second, status = _get(_republish(bundle), {"If-None-Match": first["etag"]})
+def test_a_new_edition_with_the_same_build_id_changes_the_etag(edition: Path) -> None:
+    first, _ = _get(edition)
+    second, status = _get(_next_edition(edition), {"If-None-Match": first["etag"]})
 
     assert second["etag"] != first["etag"]
     assert status == 200
 
 
-def test_an_unchanged_publication_still_revalidates(bundle: Path) -> None:
-    first, _ = _get(bundle)
-    _, status = _get(bundle, {"If-None-Match": first["etag"]})
+def test_an_unchanged_edition_still_revalidates(edition: Path) -> None:
+    first, _ = _get(edition)
+    _, status = _get(edition, {"If-None-Match": first["etag"]})
 
     assert status == 304
 
 
-def test_last_modified_is_the_publication_time_not_built_at(bundle: Path) -> None:
-    manifest = _manifest(bundle)
-    headers, _ = _get(bundle)
+def test_last_modified_is_the_edition_time_not_built_at(edition: Path) -> None:
+    manifest = _manifest(edition)
+    headers, _ = _get(edition)
 
     assert headers["last-modified"] == format_datetime(manifest.created_at.replace(microsecond=0), usegmt=True)
 
 
-def test_the_structure_cache_keys_on_the_manifest_token(bundle: Path) -> None:
-    manifest = _manifest(bundle)
+def test_the_structure_cache_keys_on_the_edition_id(edition: Path) -> None:
+    manifest = _manifest(edition)
     cache = _RecordingCache()
-    runtime = CatalogRuntime(_Provider(bundle), structure_cache=cache)
+    runtime = CatalogRuntime(_Provider(edition), structure_cache=cache)
     with _client(runtime) as client:
         client.get(_FLOW)
 
-    assert [q.token for q in cache.queries] == [manifest.token]
+    assert [q.token for q in cache.queries] == [manifest.edition_id]
 
 
-def test_a_provider_token_wins_over_the_manifest(bundle: Path) -> None:
-    runtime = CatalogRuntime(_Provider(bundle, token=_CHOSEN))
+def test_a_provider_token_wins_over_the_manifest(edition: Path) -> None:
+    runtime = CatalogRuntime(_Provider(edition, token=_CHOSEN))
     runtime.ensure_open()
 
     assert runtime.token == _CHOSEN
@@ -153,7 +153,7 @@ def test_a_provider_token_wins_over_the_manifest(bundle: Path) -> None:
 
 
 def test_without_a_manifest_the_token_is_the_build_id() -> None:
-    store = Path(tempfile.mkdtemp()) / "meta.duckdb"
+    store = Path(tempfile.mkdtemp()) / "metadata.duckdb"
     runtime = CatalogRuntime(_Provider(store, opener=lambda path: sl.LocalRegistry(path).open()))
     runtime.ensure_open()
 

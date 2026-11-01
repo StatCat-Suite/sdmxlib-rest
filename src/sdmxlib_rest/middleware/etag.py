@@ -1,8 +1,8 @@
 """Conditional GET (ETag / Last-Modified / 304) middleware.
 
-A publication of the bundle is immutable — every (URL + query string +
+An edition is immutable — every (URL + query string +
 Accept header + language) deterministically maps to one byte-stream until
-the bundle is re-published, which mints a new ``token``, or an annotator's
+a new edition is served, which has a new ``token``, or an annotator's
 fingerprint changes (GH-2); ``effective_token`` folds in both. That makes
 conditional GET trivial:
 
@@ -11,7 +11,7 @@ conditional GET trivial:
   release; the resolved language is the primary tag parsed from
   ``Accept-Language`` (``en`` when absent). The hash never reads the body,
   so it is the same with or without compression.
-- Last-Modified is the publication's timestamp (``runtime.last_modified``).
+- Last-Modified is the edition's timestamp (``runtime.last_modified``).
 
 When a client sends ``If-None-Match`` matching the ETag, or
 ``If-Modified-Since`` >= that timestamp, we return ``304 Not Modified``
@@ -37,12 +37,12 @@ if TYPE_CHECKING:
 class ConditionalGetMiddleware:
     """ASGI middleware adding ETag / Last-Modified + handling If-None-Match / If-Modified-Since.
 
-    Reads ``effective_token`` (the publication's token with any annotator
+    Reads ``effective_token`` (the edition's token with any annotator
     fingerprint folded in, GH-2) and ``last_modified`` off the injected
     `CatalogRuntime`; before the catalog is open the middleware passes
     through untouched. ``version`` is the consumer app's version string: it
     busts every ETag on release so a response-shape change ships new ETags
-    even though the bundle's ``token`` is stable across code deploys.
+    even though the edition's ``token`` is stable across code deploys.
     """
 
     def __init__(self, app: ASGIApp, *, runtime: CatalogRuntime, cache_control: str = "", version: str = "") -> None:
@@ -85,7 +85,7 @@ class ConditionalGetMiddleware:
         # `__version__` busts caches on every release. Without it, server-side
         # response shape changes (e.g. JSON post-processing in the v1 forwarders
         # injecting `obs_count` / `DEFAULT` annotations) ride on the old ETag
-        # because the bundle's token is stable across code deploys —
+        # because the edition's token is stable across code deploys —
         # clients keep getting 304 with their pre-change cached body.
         signature = f"{self.version}|{token}|{scope['path']}|{scope['query_string'].decode()}|{accept}|{resolved_lang}"
         etag_value = hashlib.sha256(signature.encode("utf-8")).hexdigest()[:16]
@@ -151,7 +151,7 @@ def _if_none_match_satisfied(header: str | None, etag: str) -> bool:
 
 
 def _if_modified_since_satisfied(header: str | None, built_at: datetime) -> bool:
-    """``True`` if the client's ``If-Modified-Since`` is >= the bundle's ``built_at``."""
+    """``True`` if the client's ``If-Modified-Since`` is >= the edition's ``built_at``."""
     if not header:
         return False
     try:
@@ -161,7 +161,7 @@ def _if_modified_since_satisfied(header: str | None, built_at: datetime) -> bool
     if client_dt.tzinfo is None:
         client_dt = client_dt.replace(tzinfo=UTC)
     # The resource hasn't been modified since the client's timestamp if their
-    # timestamp is >= the bundle's built_at (down to whole-second precision —
+    # timestamp is >= the edition's built_at (down to whole-second precision —
     # HTTP-date is second-resolution).
     return client_dt.replace(microsecond=0) >= built_at.replace(microsecond=0)
 

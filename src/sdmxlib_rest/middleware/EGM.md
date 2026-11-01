@@ -177,5 +177,5 @@ wires the dependency, the OpenAPI hook and the isa-l zip backend.
 - `tests/test_compression_roundtrip.py`, `tests/test_head_method.py`,
   `tests/test_perf_log.py`, `tests/test_cache_control_header.py` and
   `tests/test_openapi_vendor_markers.py` cover the individual layers.
-  `tests/test_annotator_fingerprint.py` and `tests/test_publication_token.py`
+  `tests/test_annotator_fingerprint.py` and `tests/test_edition_token.py`
   cover the ETag's token input.

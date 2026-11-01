@@ -57,7 +57,7 @@ language. It does not read the body, so it is computed before the route runs
 and is the same with or without compression.
 
 `If-None-Match` and `If-Modified-Since` answer 304 when they match. A new
-publication mints a new token, and an annotation change a new fingerprint
+edition has a new token, and an annotation change a new fingerprint
 ([Annotations and overlays](annotations.md)); either changes every ETag.
 Error responses carry no ETag and no `Cache-Control`.
 
@@ -66,7 +66,7 @@ Error responses carry no ETag and no `Cache-Control`.
 - **Unknown query parameters are a 400** that names the parameter, so a typo
   such as `?detial=full` fails instead of being ignored.
 - **`asOf` is a 501** on the structure and metadata routes. The service
-  serves one publication and keeps no history. `/availability` does not take
+  serves one edition and keeps no history. `/availability` does not take
   `asOf`, so there it is the unknown-parameter 400.
 - **`HEAD`** works on every `GET` route and returns the `GET` headers.
 - **Compression:** gzip through isa-l, at level 1, for responses of 1 KB or

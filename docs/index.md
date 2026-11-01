@@ -1,7 +1,7 @@
 # sdmxlib-rest
 
 sdmxlib-rest serves an [sdmxlib](https://statcat-suite.github.io/sdmxlib/)
-`BundleRegistry` over [SDMX-REST 2.2.2](https://github.com/sdmx-twg/sdmx-rest).
+`EditionRegistry` over [SDMX-REST 2.2.2](https://github.com/sdmx-twg/sdmx-rest).
 It owns the parts of an SDMX-REST service that every catalog shares: the URL
 grammar, content negotiation, localisation, conditional GET, compression and
 response assembly. A consumer supplies how the registry is opened and,
@@ -11,7 +11,7 @@ optionally, catalog-specific behaviour through a set of seams.
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.runtime import CatalogRuntime
 
-runtime = CatalogRuntime(BundleProvider("path/to/bundle"))
+runtime = CatalogRuntime(EditionProvider("path/to/<product>/<edition_id>"))
 app = create_app(
     runtime,
     RestSettings(title="my-sdmx-api", version="1.0.0"),
@@ -20,7 +20,7 @@ app = create_app(
 ```
 
 That app serves the structure, metadata and availability routes.
-[Serving a bundle](serving.md) shows `BundleProvider` and how to run it.
+[Serving an edition](serving.md) shows `EditionProvider` and how to run it.
 
 ## What it serves
 
@@ -55,10 +55,10 @@ correct service which recomputes more than it needs to.
 
 ## Where it sits in the suite
 
-sdmxlib-rest depends on sdmxlib and on nothing else in the suite. It serves a
-bundle that statcatlib builds and sdmxlib defines; the
+sdmxlib-rest depends on sdmxlib and on nothing else in the suite. It serves an
+edition of a product that statcatlib builds and sdmxlib defines; the
 [suite architecture](https://statcat-suite.github.io/architecture/) describes
-the bundle and its lifecycle. A test fails the build if the library imports
+products, editions and their lifecycle. A test fails the build if the library imports
 statcatlib.
 
 ## Install

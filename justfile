@@ -106,41 +106,41 @@ coverage:
     uv run pytest -m unit --cov --cov-report=term-missing --cov-report=xml --cov-report=html
     @echo "HTML report: htmlcov/index.html"
 
-# The ratios behind milestone 1. Needs a real bundle: the effects that motivate
-# that work do not exist at fixture size, so without SDMXLIB_REST_BENCH_BUNDLE
+# The ratios behind milestone 1. Needs a real edition: the effects that motivate
+# that work do not exist at fixture size, so without SDMXLIB_REST_BENCH_EDITION
 # every test skips rather than measuring something meaningless.
 #
-# Bundle-tier benchmarks against a published bundle (its publication directory)
+# Edition-tier benchmarks against a sealed edition (its edition directory)
 [group('test')]
-bench bundle="":
-    SDMXLIB_REST_BENCH_BUNDLE="{{bundle}}" uv run pytest -m bundle -s -v
+bench edition="":
+    SDMXLIB_REST_BENCH_EDITION="{{edition}}" uv run pytest -m edition -s -v
 
-# A real bundle cannot leave the machine holding it, so the bundle tier also
-# runs against `sdmxlib.testing.synthetic_bundle` (GH-37). SHAPE is a file
+# A real edition cannot leave the machine holding it, so the edition tier also
+# runs against `sdmxlib.testing.synthetic_edition` (GH-37). SHAPE is a file
 # under tests/bench/shapes/ or shapes/local/, or a .json path, chosen by hand:
 # `large` is one 20k-code three-level hierarchy and four small dimensions, 20M
 # rows, built in about 20 s. `census` is modelled on the public 2021 Census
 # Profile: a ~580k-code six-level geography, a ~2.6k-code nine-level
 # characteristic list, names in English and French, 20M rows, about 2 min. The
-# bundle is cached under .bench/ by shape and seed.
+# edition is cached under .bench/ by shape and seed.
 #
-# Build (or reuse) a synthetic bundle of SHAPE and run the bundle tier on it
+# Build (or reuse) a synthetic edition of SHAPE and run the edition tier on it
 [group('test')]
 bench-synthetic shape="large" seed="1":
     #!/usr/bin/env bash
     set -euo pipefail
     name=$(basename "{{shape}}" .json)
     out="$(pwd)/.bench/synthetic-${name}-{{seed}}"
-    publication=$(uv run python tools/synthetic_bench.py build "{{shape}}" "${out}" --seed {{seed}})
-    just bench "${publication}"
+    edition=$(uv run python tools/synthetic_bench.py build "{{shape}}" "${out}" --seed {{seed}})
+    just bench "${edition}"
 
-# Its output is gitignored (tests/bench/shapes/local/): a real bundle's codelist
-# sizes and observation count identify it. Needs a publication sdmxlib 0.74 can open.
+# Its output is gitignored (tests/bench/shapes/local/): a real edition's codelist
+# sizes and observation count identify it. Needs an edition sdmxlib 0.80 can open.
 #
-# Write a real bundle's shape for `just bench-synthetic NAME`
+# Write a real edition's shape for `just bench-synthetic NAME`
 [group('test')]
-bench-profile bundle flow name:
-    uv run python tools/synthetic_bench.py profile "{{bundle}}" "{{flow}}" "{{name}}"
+bench-profile edition flow name:
+    uv run python tools/synthetic_bench.py profile "{{edition}}" "{{flow}}" "{{name}}"
 
 [group('test')]
 ci: check test docs-build

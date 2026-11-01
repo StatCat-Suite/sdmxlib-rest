@@ -123,7 +123,7 @@ def test_the_binding_column_map_is_the_fallback_order(world: World) -> None:
 def _registry_ordering(dimension_ids: list[str]) -> sl.LocalRegistry:
     """A registry whose ``AG:DF(1.0)`` is built on a DSD with ``dimension_ids`` in that order."""
 
-    registry = sl.LocalRegistry(Path(tempfile.mkdtemp()) / "meta.duckdb").open()
+    registry = sl.LocalRegistry(Path(tempfile.mkdtemp()) / "metadata.duckdb").open()
     agency = sl.Agency(id="AG")
 
     def concept(cid: str) -> sl.SdmxUrn[sl.Concept]:
@@ -164,8 +164,8 @@ def _registry_ordering(dimension_ids: list[str]) -> sl.LocalRegistry:
     return registry
 
 
-def test_a_reopened_bundle_gets_its_own_slot_order() -> None:
-    """The memo is per registry: a rebuilt bundle may reorder a non-final DSD under the same URN.
+def test_a_reopened_edition_gets_its_own_slot_order() -> None:
+    """The memo is per registry: a rebuilt edition may reorder a non-final DSD under the same URN.
 
     Keyed on the flow URN alone, the second registry was answered from the
     first one's entry, and every dotted key against it read its segments

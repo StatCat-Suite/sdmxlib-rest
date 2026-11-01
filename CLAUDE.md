@@ -2,7 +2,7 @@
 
 ## What this is
 
-A generic SDMX-REST HTTP surface over a [sdmxlib](../sdmxlib) `BundleRegistry`.
+A generic SDMX-REST HTTP surface over a [sdmxlib](../sdmxlib) `EditionRegistry`.
 It owns the parts of an SDMX-REST service that are the same for every catalog —
 URL grammar, content negotiation, localisation, streaming, response assembly —
 and pushes everything catalog-specific behind explicit seams.
@@ -14,7 +14,7 @@ Don't add a seam speculatively.
 ## The rule
 
 **The library holds no catalog-specific logic.** If something needs to know
-about a particular bundle, lake layout, agency, codelist or vendor parameter, it
+about a particular product, lake layout, agency, codelist or vendor parameter, it
 belongs in the consumer, behind a seam. The library provides the Protocol and
 an inert default; the consumer provides the implementation.
 
@@ -26,7 +26,7 @@ A default must be inert: a consumer installing none of the seams must get a
 All are Protocols carried on `CatalogRuntime` (`runtime.py`).
 
 `CatalogProvider` is the one seam that names a concrete type: it returns an
-`sl.BundleRegistry`, the read-only registry `LocalRegistry.bundle` opens,
+`sl.EditionRegistry`, the read-only registry `LocalRegistry.edition` opens,
 because `binding_for` — which the binding-driven data-plane helpers need —
 exists only there and no sdmxlib Protocol covers it.
 
@@ -215,8 +215,8 @@ just check-any # `Any` in src/ against tools/any_baseline.txt; record a drop wit
 just test      # unit tests
 just ci        # full gate
 just typecheck # pyrefly alone (also part of `check`)
-just bench <bundle-dir>   # the bundle tier — ratios against a real lake; `ci` skips it
-just bench-synthetic [shape]  # the same tier on a synthetic bundle: `large`, or `census` for a census-sized geography
+just bench <edition-dir>  # the edition tier — ratios against a real lake; `ci` skips it
+just bench-synthetic [shape]  # the same tier on a synthetic edition: `large`, or `census` for a census-sized geography
 just docs      # serve the docs site (docs/, mkdocs.yml); `just docs-build` is the strict build in `ci`
 ```
 
@@ -232,7 +232,7 @@ a major. `just release-1-preview` through `release-5-pypi`: a release is a
 to PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
 
 Every suite library is pre-1.0, so a minor bump may break. `pyproject.toml`
-caps each suite dependency below its next minor (`sdmxlib>=0.74,<0.75`); the
+caps each suite dependency below its next minor (`sdmxlib>=0.80,<0.81`); the
 PR that adopts a new sdmxlib minor raises the cap.
 
 ## Docs site
@@ -246,6 +246,6 @@ updates the page that describes it.
 
 ## Related repos
 
-- `../sdmxlib` — the domain model and `BundleRegistry` this sits on top of.
-- `../statcatlib` (formerly pinax) — `Catalog` bundle format a consumer's
+- `../sdmxlib` — the domain model and `EditionRegistry` this sits on top of.
+- `../statcatlib` (formerly pinax) — `Catalog` format a consumer's
   provider may open. sdmxlib-rest must never depend on it.

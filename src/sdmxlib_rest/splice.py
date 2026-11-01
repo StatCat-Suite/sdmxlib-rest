@@ -44,10 +44,10 @@ class SpliceContext:
     consumer sub-apps can vary splice behaviour without new context fields.
     """
 
-    registry: sl.BundleRegistry
+    registry: sl.EditionRegistry
     conn: duckdb.DuckDBPyConnection
     # The runtime's `effective_token`, so a splice that caches keys on
-    # annotation changes as well as publications.
+    # annotation changes as well as new editions.
     token: str
     agency_id: str = ""
     resource_id: str = ""

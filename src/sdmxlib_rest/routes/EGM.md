@@ -73,7 +73,7 @@ helpers.
   `Depends` on `runtime.py` getters (`get_registry`, `get_meta_conn`,
   `get_token`, `get_effective_token`, `get_splices`, `get_structure_cache`,
   `get_message_annotator`, `get_metadata_store`, `get_availability_values`,
-  `get_filter_shaper`). No module imports a consumer or names a bundle.
+  `get_filter_shaper`). No module imports a consumer or names a product.
 - Path segments are validated by regex in `Path(pattern=...)`, so a malformed
   reference is a 422 from FastAPI. Four type segments carry no `pattern`:
   `structureType` and `itemSchemeType` on `/structure`, `context` on
@@ -199,11 +199,11 @@ helpers.
   `tests/test_availability_sidecar.py`, `tests/test_availability_values.py`,
   `tests/test_stub_never_materialises.py`, `tests/test_round_trip.py`,
   `tests/test_render_availability.py`,
-  `tests/test_annotator_fingerprint.py`, `tests/test_synthetic_bundle.py` and
+  `tests/test_annotator_fingerprint.py`, `tests/test_synthetic_edition.py` and
   `tests/test_library_create_app.py` (router mounting).
 - Measure `/availability` and structure-route performance with
-  `just bench <bundle-dir>` against a real lake or
+  `just bench <edition-dir>` against a real lake or
   `just bench-synthetic [shape]` (`large` or `census`). The bench files are
   `tests/bench/test_availability_sql.py` (loop versus combined aggregate,
   GH-36) and `tests/bench/test_structure_routes.py`. Building a query root
-  costs about 13 to 19 ms on a large census bundle (sdmxlib#426).
+  costs about 13 to 19 ms on a large census edition (sdmxlib#426).

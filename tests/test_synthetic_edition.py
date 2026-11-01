@@ -1,14 +1,14 @@
-"""The library routes, served from a published bundle the way a consumer opens one.
+"""The library routes, served from a sealed edition the way a consumer opens one.
 
-`conftest.py`'s world is a bundle assembled by hand. This one is built and
-published by `sdmxlib.testing.synthetic_bundle` and opened with
-`LocalRegistry.bundle`: the path a consumer's provider takes. It has what the
+`conftest.py`'s world is an edition assembled by hand. This one is built and
+sealed by `sdmxlib.testing.synthetic_edition` and opened with
+`LocalRegistry.edition`: the path a consumer's provider takes. It has what the
 hand-built world lacks — a
 hierarchical codelist, names in two languages, an observation attribute,
-annotated codes — and it needs no real bundle, so it runs everywhere.
+annotated codes — and it needs no real edition, so it runs everywhere.
 
-Expected answers come from sdmxlib's own query DSL over the same bundle, not
-from constants, so a reseeded or reshaped bundle still checks the route
+Expected answers come from sdmxlib's own query DSL over the same edition, not
+from constants, so a reseeded or reshaped edition still checks the route
 against an independent reading of the data.
 """
 
@@ -20,7 +20,7 @@ import polars as pl
 import pytest
 import sdmxlib as sl
 from fastapi.testclient import TestClient
-from sdmxlib.testing import Dim, Shape, synthetic_bundle
+from sdmxlib.testing import Dim, Shape, synthetic_edition
 
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.provider import OpenedCatalog
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from sdmxlib.bundle import Manifest
+    from sdmxlib.edition import Manifest
 
 pytestmark = pytest.mark.unit
 
@@ -52,46 +52,46 @@ _SHAPE = Shape(
 )
 
 
-class _PublishedBundleProvider:
-    """Opens a publication the way a consumer's provider does."""
+class _EditionProvider:
+    """Opens an edition the way a consumer's provider does."""
 
-    def __init__(self, publication: Path) -> None:
-        self._publication = publication
+    def __init__(self, edition: Path) -> None:
+        self._edition = edition
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._publication)
+        registry = sl.LocalRegistry.edition(self._edition)
         manifest = registry.manifest
         assert manifest is not None
         return OpenedCatalog(
             registry=registry,
             meta_conn=registry.connection,
-            build_id=manifest.bundle_id,
+            build_id=manifest.product_id,
             built_at=manifest.created_at.isoformat(),
             on_close=registry.close,
         )
 
 
 @pytest.fixture(scope="module")
-def published(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Manifest]:
-    root = tmp_path_factory.mktemp("synthetic") / "bundle"
-    manifest = synthetic_bundle(root, _SHAPE, seed=7)
-    return root / manifest.token, manifest
+def sealed(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Manifest]:
+    root = tmp_path_factory.mktemp("synthetic") / "product"
+    manifest = synthetic_edition(root, _SHAPE, seed=7)
+    return root / manifest.edition_id, manifest
 
 
 @pytest.fixture(scope="module")
-def observations(published: tuple[Path, Manifest]) -> pl.DataFrame:
+def observations(sealed: tuple[Path, Manifest]) -> pl.DataFrame:
     """Every observation, read through sdmxlib's DSL: the oracle for /availability."""
-    publication, _ = published
-    with sl.LocalRegistry.bundle(publication) as registry:
+    edition, _ = sealed
+    with sl.LocalRegistry.edition(edition) as registry:
         return registry.obs(_FLOW).frame()
 
 
 @pytest.fixture(scope="module")
-def runtime(published: tuple[Path, Manifest], observations: pl.DataFrame) -> Iterator[CatalogRuntime]:
-    # `observations` first, so the oracle reads the bundle before the app does.
+def runtime(sealed: tuple[Path, Manifest], observations: pl.DataFrame) -> Iterator[CatalogRuntime]:
+    # `observations` first, so the oracle reads the edition before the app does.
     del observations
-    publication, _ = published
-    runtime = CatalogRuntime(_PublishedBundleProvider(publication))
+    edition, _ = sealed
+    runtime = CatalogRuntime(_EditionProvider(edition))
     yield runtime
     runtime.close()
 
@@ -113,13 +113,13 @@ def _distinct(frame: pl.DataFrame, column: str) -> list[str]:
     return sorted(str(v) for v in frame[column].unique().to_list())
 
 
-def test_the_runtime_keys_on_the_published_manifest(
-    client: TestClient, runtime: CatalogRuntime, published: tuple[Path, Manifest]
+def test_the_runtime_keys_on_the_edition_manifest(
+    client: TestClient, runtime: CatalogRuntime, sealed: tuple[Path, Manifest]
 ) -> None:
-    _, manifest = published
+    _, manifest = sealed
     client.get(f"/structure/dataflow/{_FLOW_PATH}")
 
-    assert runtime.token == manifest.token
+    assert runtime.token == manifest.edition_id
     assert runtime.build_id == "synthetic-7"
 
 

@@ -3,7 +3,7 @@
 ## Overview
 
 `sdmxlib_rest` is a generic SDMX-REST 2.2.2 HTTP surface over an sdmxlib
-`BundleRegistry`. It owns what every catalog serves the same way: URL
+`EditionRegistry`. It owns what every catalog serves the same way: URL
 grammar, content negotiation, `Accept-Language` localisation, streaming and
 response assembly. Everything catalog-specific sits behind a seam, a
 Protocol carried on `CatalogRuntime` with an inert default, which the
@@ -39,7 +39,7 @@ seams.
   of the `/docs` dropdown.
 - `CatalogProvider` and `OpenedCatalog` (`provider.py`): the one required
   seam. `open()` returns an `OpenedCatalog` holding `registry`
-  (`sl.BundleRegistry`), `meta_conn` (a DuckDB connection), an opaque
+  (`sl.EditionRegistry`), `meta_conn` (a DuckDB connection), an opaque
   `manifest`, `build_id`, `built_at`, an optional `token` override and an
   `on_close` callback that `close()` runs.
 - `CatalogRuntime` (`runtime.py`): holds the provider, the opened catalog
@@ -152,9 +152,9 @@ seams.
   `share_runtime` and copies `state` onto every mount, so the provider opens
   once.
 - `CatalogRuntime.token` is the provider's `token` if set, else the sdmxlib
-  manifest's `token`, else `build_id`. `effective_token` equals `token` while
+  edition manifest's `edition_id`, else `build_id`. `effective_token` equals `token` while
   the annotator has no fingerprint, and is otherwise the sha256 of
-  `v2\n{token}\n{fingerprint}`, the same lines sdmxlib's `effective_token`
+  `v3\n{token}\n{fingerprint}`, the same lines sdmxlib's `effective_token`
   hashes for overlays. The two tokens match only when an `OverlayAnnotator` is
   the annotator itself; inside a `CompositeMessageAnnotator` each fingerprint
   is prefixed with its position. The structure cache, the splices and the ETag
@@ -200,9 +200,9 @@ seams.
 - Full gate: `just ci` (`check`, `test`, `docs-build`).
 - Package-level tests: `tests/test_library_create_app.py`,
   `tests/test_library_import_boundary.py`,
-  `tests/test_middleware_invariants.py`, `tests/test_publication_token.py`,
+  `tests/test_middleware_invariants.py`, `tests/test_edition_token.py`,
   `tests/test_annotator_fingerprint.py`, `tests/test_overlays.py`,
   `tests/test_availability_values.py`.
 - Performance of `/structure` and `/availability` against a real or
-  synthetic bundle: `just bench <bundle-dir>` or `just bench-synthetic
+  synthetic edition: `just bench <edition-dir>` or `just bench-synthetic
   [large|census]`.

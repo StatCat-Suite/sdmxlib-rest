@@ -46,7 +46,7 @@ class _BareProvider:
 
     def open(self) -> OpenedCatalog:
         return OpenedCatalog(
-            registry=sl.LocalRegistry(Path(tempfile.mkdtemp()) / "meta.duckdb").open(),
+            registry=sl.LocalRegistry(Path(tempfile.mkdtemp()) / "metadata.duckdb").open(),
             meta_conn=duckdb.connect(),
             build_id="b",
             built_at="2026-01-01T00:00:00Z",

@@ -18,7 +18,7 @@ The runtime owns the DuckDB connection (structural + metadata linkage live in
 the same meta store), so it is passed in; the annotator owns only the
 projection.
 
-An annotator whose output can change while the bundle stays the same — one
+An annotator whose output can change while the edition stays the same — one
 applying an annotation overlay that is edited on a running deployment — also
 implements `SupportsFingerprint` (GH-2). The runtime folds the fingerprint into
 `CatalogRuntime.effective_token`, which the structure cache and the ETag key
@@ -46,22 +46,22 @@ class MessageAnnotator(Protocol):
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,
+        registry: sl.EditionRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
         """Return ``message`` (or a copy) with the consumer's annotations applied.
 
         ``registry`` + ``conn`` let the annotator derive whatever it needs from
-        the bundle; ``token`` changes at every publication of the bundle, so
-        the annotator can memoise derivations per publication.
+        the edition; ``token`` changes with every edition, so
+        the annotator can memoise derivations per edition.
         """
         ...
 
 
 @runtime_checkable
 class SupportsFingerprint(Protocol):
-    """An annotator whose output can change while the bundle's token does not."""
+    """An annotator whose output can change while the edition's token does not."""
 
     def fingerprint(self) -> str:
         """A value that changes whenever `annotate` would produce different output.
@@ -69,7 +69,7 @@ class SupportsFingerprint(Protocol):
         Called on every request, by the ETag middleware and the structure
         route, so it must be cheap: a version counter or a digest computed when
         the annotator's inputs change, never I/O. ``""`` means the output
-        depends on the bundle alone, which is the same as not implementing this.
+        depends on the edition alone, which is the same as not implementing this.
         """
         ...
 
@@ -93,7 +93,7 @@ class CompositeMessageAnnotator:
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,
+        registry: sl.EditionRegistry,
         conn: duckdb.DuckDBPyConnection,
         token: str,
     ) -> StructureMessage:
@@ -115,7 +115,7 @@ class NullMessageAnnotator:
         self,
         message: StructureMessage,
         *,
-        registry: sl.BundleRegistry,  # noqa: ARG002
+        registry: sl.EditionRegistry,  # noqa: ARG002
         conn: duckdb.DuckDBPyConnection,  # noqa: ARG002
         token: str,  # noqa: ARG002
     ) -> StructureMessage:

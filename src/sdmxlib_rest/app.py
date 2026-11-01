@@ -67,7 +67,7 @@ _DEFAULT_ALLOW_METHODS: tuple[str, ...] = ("GET", "HEAD", "OPTIONS", "POST")
 class RestSettings:
     """Configuration the generic app assembly needs — nothing catalog-specific.
 
-    A consumer's own settings object will carry far more (bundle paths, log
+    A consumer's own settings object will carry far more (edition paths, log
     destinations, feature flags); map the relevant slice onto this.
     """
 

@@ -1,4 +1,4 @@
-# Serving a bundle
+# Serving an edition
 
 A service needs three things: a provider that opens the registry, a
 `CatalogRuntime` that holds it with the seams, and the app `create_app`
@@ -7,19 +7,19 @@ assembles.
 ## The provider
 
 `CatalogProvider` has one method, `open`, which returns an `OpenedCatalog`.
-This provider opens a publication of a bundle with sdmxlib:
+This provider opens one edition of a product with sdmxlib:
 
 ```python
 import sdmxlib as sl
 from sdmxlib_rest.provider import OpenedCatalog
 
 
-class BundleProvider:
-    def __init__(self, publication: str) -> None:
-        self._publication = publication
+class EditionProvider:
+    def __init__(self, edition: str) -> None:
+        self._edition = edition
 
     def open(self) -> OpenedCatalog:
-        registry = sl.LocalRegistry.bundle(self._publication)
+        registry = sl.LocalRegistry.edition(self._edition)
         return OpenedCatalog(
             registry=registry,
             meta_conn=registry.connection,
@@ -27,24 +27,30 @@ class BundleProvider:
         )
 ```
 
-A bundle is a directory of publications, `<bundle>/<token>/`, over the
-`data/` they share, and the provider opens one publication.
-`LocalRegistry.bundle` opens it read-only and returns an `sl.BundleRegistry`,
-so any number of processes can serve the same publication. It refuses a
-directory without `bundle.manifest.json` with `ManifestError`, and a store
-schema it does not read with `StoreSchemaError`. The manifest's `token`, the
-publication's directory name, is what every cache and the ETag key on.
+A product is a directory of editions, `<product>/<edition_id>/`, over the
+`data/` they share, and the provider opens one edition. An edition holds
+`manifest.json`, `metadata.duckdb` and `tables.ducklake`.
+`LocalRegistry.edition` opens it read-only and returns an `sl.EditionRegistry`,
+so any number of processes can serve the same edition. It raises
+`ManifestError` for a directory without `manifest.json` or with a manifest
+format other than 3.x, so every directory sdmxlib 0.79 or earlier wrote is
+refused, and `StoreSchemaError` for a store schema it does not read. The manifest's `edition_id`, the edition's directory name,
+is what every cache and the ETag key on.
+
+Which edition of each product is live is a deployment's decision. sdmxlib
+records it in the Inventory (`sdmxlib.inventory`); a provider that reads it
+passes the live edition's directory to `LocalRegistry.edition`.
 
 **The registry must reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the
-registry's own connection and attaches the lake there. `LocalRegistry.bundle`
+registry's own connection and attaches the lake there. `LocalRegistry.edition`
 does this, and so does statcatlib's `Catalog`. A lake attached only to some
 other connection is invisible to `/availability`.
 
 `meta_conn` is the DuckDB connection the seams receive, for consumers whose
 seams read their own tables. `OpenedCatalog` also takes `build_id` and
 `built_at`, which identify the build in logs and `Last-Modified`, and `token`,
-which overrides the manifest's token when a provider keys on something else.
+which overrides the manifest's edition id when a provider keys on something else.
 
 ## The app
 
@@ -52,7 +58,7 @@ which overrides the manifest's token when a provider keys on something else.
 from sdmxlib_rest.app import RestSettings, create_app, library_routers
 from sdmxlib_rest.runtime import CatalogRuntime
 
-runtime = CatalogRuntime(BundleProvider("path/to/bundle/<token>"))
+runtime = CatalogRuntime(EditionProvider("path/to/<product>/<edition_id>"))
 app = create_app(
     runtime,
     RestSettings(title="my-sdmx-api", version="1.0.0"),
