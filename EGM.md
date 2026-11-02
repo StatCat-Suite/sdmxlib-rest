@@ -13,7 +13,7 @@ serves `/structure`, `/metadata` and `/availability`; a consumer writes its
 own `/data` route from the helpers in `sdmxlib_rest.data`.
 
 The repository holds one distribution, `sdmxlib-rest`, built from
-`pyproject.toml` and pinned to `sdmxlib>=0.80,<0.81`. `README.md` is the user
+`pyproject.toml` and pinned to `sdmxlib>=0.81,<0.82`. `README.md` is the user
 guide and PyPI description; `CLAUDE.md` holds the project's working rules,
 the seams table and the writing style; `docs/` and `mkdocs.yml` build the
 docs site, whose guide pages restate the behaviour of the seams, the routes
