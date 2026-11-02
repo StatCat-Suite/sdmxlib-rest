@@ -8,6 +8,66 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.9.0] - 2026-11-02
+
+sdmxlib-rest now serves sdmxlib editions: it opens one with
+`LocalRegistry.edition(path)`, reads manifest format 3.0 only, and requires
+sdmxlib 0.81, whose Inventory reader accepts the `describe` roots statcatlib
+writes. 0.8.0 required sdmxlib 0.72; this release moves straight to 0.81,
+so a consumer takes sdmxlib's breaking changes from 0.73 to 0.81 with it.
+
+**Needs** Python `>=3.14` and sdmxlib `>=0.81,<0.82`.
+
+### Upgrading
+
+- **Rebuild every catalog before upgrading.** sdmxlib 0.80 and later refuse a
+  2.x manifest, and there is no compatibility path. Re-ingest each catalog
+  with sdmxlib 0.81 (GH-81).
+- **Type the registry as `sl.EditionRegistry`.** `OpenedCatalog.registry`,
+  `CatalogRuntime.registry`, `get_registry` and the registry each seam
+  receives (`SpliceContext`, `FilterContext`, `MessageAnnotator.annotate`)
+  are `sl.EditionRegistry`. A seam annotated `sl.LocalRegistry` no longer
+  type-checks (GH-68, GH-81).
+- **`CatalogRuntime.token` falls back to the manifest's `edition_id`** when
+  the provider sets no token (GH-81).
+- **ETags change once for a service with an annotator fingerprint.**
+  `effective_token` hashes `"v3"`, the token and the fingerprint, as sdmxlib's
+  `effective_token` does. A service without a fingerprint keeps the edition id
+  as its token (GH-68, GH-81).
+- **`OverlayAnnotator`** takes `sdmxlib.edition.Overlay` documents, and its
+  `merge=` takes `MergeHook` values. It gains `audience=`, and refuses an
+  overlay that sets name or description texts (GH-68).
+- **Readers must be at sdmxlib 0.81 before statcatlib writes a `describe`
+  root.** sdmxlib 0.80 skips such a root and stays on the version before it
+  (GH-84).
+
+The runtime's own `token` names (`OpenedCatalog.token`, `get_token`,
+`AvailabilityKey.token` and the rest) are unchanged.
+
+### Bug Fixes
+
+- **test**: Set `asyncio_default_fixture_loop_scope` for pytest 9.2
+
+### Documentation
+
+- Add the sdmxlib-rest docs site for the StatCat Suite hub, with the EGM
+  contracts and design pages. The guide page "Serving a bundle" is now
+  "Serving an edition".
+- Rewrite the README, `CLAUDE.md`, docstrings and comments to the shared
+  writing-style rules; add the README badges and AI-use note; install with
+  `uv add` first.
+
+### Testing
+
+- The bench tier follows the rename: the pytest marker is `edition`, the
+  variable `SDMXLIB_REST_BENCH_EDITION`, and the synthetic-bench stamp records
+  `edition_id`. Old `.bench/` caches rebuild (GH-81).
+
+### Miscellaneous
+
+- Add the prose check to `just check`; bring the docstring checker level with
+  statcatlib's; turn SLF001 off; parse breaking changes first in `cliff.toml`.
+
 ## [0.8.0] - 2026-10-23
 
 Annotations can now change on a running deployment without serving stale
