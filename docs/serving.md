@@ -39,10 +39,14 @@ is what every cache and the ETag key on.
 
 Which edition of each product is live is a deployment's decision. sdmxlib
 records it in the Inventory (`sdmxlib.inventory`); a provider that reads it
-passes the live edition's directory to `LocalRegistry.edition`. sdmxlib 0.81,
-the floor sdmxlib-rest requires, reads every root statcatlib writes, including
-one with `kind: describe`; 0.80 skips that root and stays on the version
-before it.
+passes the live edition's directory to `LocalRegistry.edition`, with the live
+entry's `manifest_sha256` (`LocalRegistry.edition(path,
+manifest_sha256=live.manifest_sha256)`), so that a directory holding another
+manifest than the one the Inventory records raises `ManifestError`. sdmxlib
+0.82, the floor sdmxlib-rest requires, reads a root of any event kind within
+format 1.x, including `kind: describe` and kinds added in later 1.x releases.
+sdmxlib 0.81 and earlier skip a root whose kind they do not know and stay on
+the version before it.
 
 **The registry must reach its own observations.** `/availability` reads rows
 through sdmxlib's query DSL (`registry.obs(flow)`), which runs on the

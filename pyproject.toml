@@ -29,9 +29,10 @@ dependencies = [
     # 0.80 reads manifest 3.0 and opens an edition read-only as
     # `EditionRegistry` (`LocalRegistry.edition`); it refuses a 2.x manifest.
     # 0.81 reads an Inventory root with `kind: describe`, which 0.80 skips
-    # (GH-84).
+    # (GH-84). 0.82 reads a root of any event kind within format 1.x, which
+    # 0.81 skips when it does not know the kind (GH-87).
     # Capped at the next minor while sdmxlib is pre-1.0, where a minor may break.
-    "sdmxlib>=0.81,<0.82",
+    "sdmxlib>=0.82,<0.83",
     "attrs>=24",
     # 0.133 is the first FastAPI that lets Starlette past 1.0.
     "fastapi>=0.133",
