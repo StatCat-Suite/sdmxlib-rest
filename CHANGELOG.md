@@ -8,6 +8,15 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.9.1] - 2026-11-02
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.82 (GH-87)
+  - Requires `sdmxlib>=0.82,<0.83`. sdmxlib 0.82 reads an Inventory root of any event kind within format 1.x,
+    where 0.81 skipped a kind it did not know. `docs/serving.md` shows a provider passing the Inventory's
+    `manifest_sha256` to `LocalRegistry.edition`, which raises `ManifestError` on a mismatch.
+
 ## [0.9.0] - 2026-11-02
 
 sdmxlib-rest now serves sdmxlib editions: it opens one with
