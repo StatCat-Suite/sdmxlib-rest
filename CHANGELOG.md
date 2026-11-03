@@ -8,6 +8,18 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.9.2] - 2026-11-03
+
+### Documentation
+
+- Describe what sdmxlib 0.84 changes for sdmxlib-rest (GH-90)
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.84 (GH-90)
+  - Requires `sdmxlib>=0.84,<0.85`, as statcatlib 0.13.0 does.
+  - sdmxlib 0.84 quotes the DuckDB catalog name, so the 500 `detail` for a fan-out sidecar names the table as `"lake".side` where it named `lake.side`.
+
 ## [0.9.1] - 2026-11-02
 
 ### Miscellaneous
