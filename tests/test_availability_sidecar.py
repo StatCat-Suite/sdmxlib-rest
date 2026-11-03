@@ -199,7 +199,8 @@ def test_a_fan_out_sidecar_is_refused_naming_the_table() -> None:
     assert resp.status_code == 500
     detail = resp.json()["detail"]
     assert "DF_SIDE" in detail
-    assert "lake.side" in detail, "the error must name the table the producer has to fix"
+    # sdmxlib 0.84 quotes the catalog name in the table it names (GH-90).
+    assert '"lake".side' in detail, "the error must name the table the producer has to fix"
 
 
 def test_a_fan_out_sidecar_refuses_queries_that_would_not_join_too() -> None:
