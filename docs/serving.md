@@ -42,9 +42,9 @@ records it in the Inventory (`sdmxlib.inventory`); a provider that reads it
 passes the live edition's directory to `LocalRegistry.edition`, with the live
 entry's `manifest_sha256` (`LocalRegistry.edition(path,
 manifest_sha256=live.manifest_sha256)`), so that a directory holding another
-manifest than the one the Inventory records raises `ManifestError`. sdmxlib
-0.82, the floor sdmxlib-rest requires, reads a root of any event kind within
-format 1.x, including `kind: describe` and kinds added in later 1.x releases.
+manifest than the one the Inventory records raises `ManifestError`. sdmxlib-rest
+requires sdmxlib 0.84 or later. sdmxlib 0.82 and later read a root of any
+event kind within format 1.x, including `kind: describe` and kinds added in later 1.x releases.
 sdmxlib 0.81 and earlier skip a root whose kind they do not know and stay on
 the version before it.
 
