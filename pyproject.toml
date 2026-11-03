@@ -31,8 +31,9 @@ dependencies = [
     # 0.81 reads an Inventory root with `kind: describe`, which 0.80 skips
     # (GH-84). 0.82 reads a root of any event kind within format 1.x, which
     # 0.81 skips when it does not know the kind (GH-87). 0.84 quotes the DuckDB
-    # catalog name in the SQL and plan strings it writes, which sdmxlib-rest
-    # does not read; statcatlib 0.13 requires 0.84 (GH-90).
+    # catalog name in the SQL and messages it writes, so the fan-out sidecar
+    # 500 names the table as `"lake".side`; statcatlib 0.13 requires 0.84
+    # (GH-90).
     # Capped at the next minor while sdmxlib is pre-1.0, where a minor may break.
     "sdmxlib>=0.84,<0.85",
     "attrs>=24",
