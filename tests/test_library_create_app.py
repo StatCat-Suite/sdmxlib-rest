@@ -20,6 +20,7 @@ detected.
 from __future__ import annotations
 
 import tempfile
+from importlib.metadata import version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -115,7 +116,7 @@ def test_a_toy_provider_boots_a_working_service(toy: tuple[TestClient, ToyProvid
 
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.json() == {"service": "toy-sdmx-api", "version": "0.1.0", "docs": "/docs"}
+    assert resp.json()["service"] == "toy-sdmx-api"
 
 
 def test_library_routes_are_published(toy: tuple[TestClient, ToyProvider]) -> None:
@@ -258,3 +259,22 @@ def test_unknown_query_params_are_rejected(toy: tuple[TestClient, ToyProvider]) 
     """The app-wide guard is wired by the factory, not by each consumer."""
     resp = toy[0].get("/structure/dataflow/all/all/all", params={"bogusParam": "1"})
     assert resp.status_code == 400
+
+
+def test_default_root_payload_reports_the_sdmxlib_version(toy: tuple[TestClient, ToyProvider]) -> None:
+    client, _ = toy
+    assert client.get("/").json() == {
+        "service": "toy-sdmx-api",
+        "version": "0.1.0",
+        "docs": "/docs",
+        "sdmxlib_version": version("sdmxlib"),
+    }
+
+
+def test_consumer_root_payload_reports_the_installed_sdmxlib_version() -> None:
+    root_payload = {"service": "consumer", "sdmxlib_version": "0.0.0"}
+    app, _ = _build(root_payload=root_payload)
+    with TestClient(app) as client:
+        body = client.get("/").json()
+    assert body == {"service": "consumer", "sdmxlib_version": version("sdmxlib")}
+    assert root_payload["sdmxlib_version"] == "0.0.0"
