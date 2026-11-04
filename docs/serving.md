@@ -43,7 +43,9 @@ passes the live edition's directory to `LocalRegistry.edition`, with the live
 entry's `manifest_sha256` (`LocalRegistry.edition(path,
 manifest_sha256=live.manifest_sha256)`), so that a directory holding another
 manifest than the one the Inventory records raises `ManifestError`.
-sdmxlib-rest requires sdmxlib 0.84 or later. sdmxlib 0.82 and later read a
+sdmxlib-rest requires sdmxlib 0.85 or later. sdmxlib 0.85 falls back to
+`catalog.json` and `inventory/HISTORY` when `CURRENT` is missing, malformed or
+names a root that fails to verify. sdmxlib 0.82 and later read a
 root of any event kind within format 1.x, including `kind: describe` and kinds
 added in later 1.x releases. sdmxlib 0.81 and earlier skip a root whose kind
 they do not know and stay on the version before it.
@@ -94,7 +96,7 @@ lists every dataflow, and `GET /docs` serves the OpenAPI page.
 
 | Field | Default | Sets |
 | --- | --- | --- |
-| `title`, `version`, `description` | required, required, `""` | The OpenAPI document and the `GET /` payload |
+| `title`, `version`, `description` | required, required, `""` | The OpenAPI document and the default `GET /` payload |
 | `cache_control` | `public, max-age=300, stale-while-revalidate=3600` | `Cache-Control` on successful responses |
 | `cors_allowed_origins` | `("*",)` | CORS origins |
 | `cors_max_age` | `3600` | How long a browser keeps a preflight answer |
@@ -113,7 +115,10 @@ lists every dataflow, and `GET /docs` serves the OpenAPI page.
 - **`on_startup`**: awaited after the registry opens; cache warmers go here.
 - **`perf_sink`**: receives one record per request from the performance log.
 - **`state`** and **`root_payload`**: values for `app.state` and the body of
-  `GET /`.
+  `GET /`. The body defaults to `service`, `version` and `docs`. `create_app`
+  adds `sdmxlib_version`, the installed sdmxlib version, to either body, and
+  overwrites a `sdmxlib_version` key in `root_payload`. A release job reads
+  this field from each pod before it expires old Inventory roots.
 
 The middleware between those slots is fixed, in the order
 [HTTP behaviour](http.md#middleware-order) describes.

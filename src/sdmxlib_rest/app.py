@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
+from importlib.metadata import version as _distribution_version
 from typing import Any
 
 from attrs import field, frozen
@@ -170,6 +171,8 @@ def create_app(
             ``runtime.close()``. Supply one only if you need to close something
             more than the runtime; it takes over responsibility for doing so.
         root_payload: JSON body for ``GET /``. Defaults to a service identity.
+            Either body carries ``sdmxlib_version``, the installed sdmxlib
+            version, which overwrites a consumer's own key of that name.
 
     Returns:
         The assembled app, with the catalog still closed until startup.
@@ -239,6 +242,9 @@ def create_app(
             "docs": "/docs",
         }
     )
+    # A release job reads this field to decide whether every pod can read an
+    # expired Inventory root, so a consumer's own value must not stand in for it.
+    payload["sdmxlib_version"] = _distribution_version("sdmxlib")
 
     @app.get("/", include_in_schema=False)
     async def _root() -> JSONResponse:

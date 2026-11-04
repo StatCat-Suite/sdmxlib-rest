@@ -28,7 +28,9 @@ seams.
   installs a handler turning sdmxlib's `ValidationError` into
   `unwritable_content_response` on the app and on every mount, wraps each
   app's `openapi` with `apply_vendor_markers`, serves a multi-spec Swagger UI
-  page at `/docs` and a JSON payload at `GET /`. `library_routers()` returns
+  page at `/docs` and a JSON payload at `GET /`, which always carries
+  `sdmxlib_version`, the installed sdmxlib version, overwriting a
+  `root_payload` key of that name. `library_routers()` returns
   `(structure.router, metadata.router, availability.router)`. `RestSettings`
   defaults: `cache_control="public, max-age=300,
   stale-while-revalidate=3600"`, CORS origins `("*",)`, `cors_max_age=3600`,
