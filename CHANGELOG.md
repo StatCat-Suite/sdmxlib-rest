@@ -8,6 +8,16 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.10.0] - 2026-11-04
+
+### Features
+
+- Report sdmxlib_version in GET / (GH-93)
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.85 (GH-93)
+
 ## [0.9.2] - 2026-11-03
 
 ### Documentation
