@@ -8,6 +8,13 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.10.2] - 2026-11-06
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.87
+  - Requires `sdmxlib>=0.87,<0.88`, so sdmxlib-rest installs beside a statcatlib that requires 0.87. sdmxlib-rest does not call the Inventory reader. A provider that reads the Inventory with its own `Fetch` follows sdmxlib's upgrading entry, because sdmxlib 0.87 calls `Fetch` from worker threads.
+
 ## [0.10.1] - 2026-11-06
 
 ### Miscellaneous
