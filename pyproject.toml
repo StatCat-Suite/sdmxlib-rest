@@ -37,9 +37,11 @@ dependencies = [
     # release job reads the version from `GET /` before it expires old roots
     # (GH-93). 0.86 adds `references=False` to `check_edition` and
     # `check_on_open` and exports `decode_manifest`, none of which sdmxlib-rest
-    # calls; statcatlib 0.15 requires 0.86.
+    # calls; statcatlib 0.15 requires 0.86. 0.87 calls a custom `Fetch` from worker
+    # threads in the Inventory reader, which `src` does not call; this range lets
+    # sdmxlib-rest install beside a statcatlib that requires 0.87.
     # Capped at the next minor while sdmxlib is pre-1.0, where a minor may break.
-    "sdmxlib>=0.86,<0.87",
+    "sdmxlib>=0.87,<0.88",
     "attrs>=24",
     # 0.133 is the first FastAPI that lets Starlette past 1.0.
     "fastapi>=0.133",
