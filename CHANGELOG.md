@@ -8,6 +8,13 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.10.1] - 2026-11-06
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.86
+  - Requires `sdmxlib>=0.86,<0.87`, as statcatlib 0.15.0 does. sdmxlib 0.86 adds `references=False` to `check_edition` and `check_on_open` and exports `decode_manifest`. sdmxlib-rest calls none of them, so a consumer changes nothing beyond the requirement.
+
 ## [0.10.0] - 2026-11-04
 
 ### Features
