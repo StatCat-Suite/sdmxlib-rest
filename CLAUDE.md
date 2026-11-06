@@ -232,7 +232,7 @@ a major. `just release-1-preview` through `release-5-pypi`: a release is a
 to PyPI, with `UV_PUBLISH_TOKEN` from `.env`.
 
 Every suite library is pre-1.0, so a minor bump may break. `pyproject.toml`
-caps each suite dependency below its next minor (`sdmxlib>=0.85,<0.86`); the
+caps each suite dependency below its next minor (`sdmxlib>=0.86,<0.87`); the
 PR that adopts a new sdmxlib minor raises the cap.
 
 ## Docs site
