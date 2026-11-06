@@ -35,9 +35,11 @@ dependencies = [
     # 500 names the table as `"lake".side`; statcatlib 0.13 requires 0.84
     # (GH-90). 0.85 carries the Inventory reader's HISTORY fallback, and a
     # release job reads the version from `GET /` before it expires old roots
-    # (GH-93).
+    # (GH-93). 0.86 adds `references=False` to `check_edition` and
+    # `check_on_open` and exports `decode_manifest`, none of which sdmxlib-rest
+    # calls; statcatlib 0.15 requires 0.86.
     # Capped at the next minor while sdmxlib is pre-1.0, where a minor may break.
-    "sdmxlib>=0.85,<0.86",
+    "sdmxlib>=0.86,<0.87",
     "attrs>=24",
     # 0.133 is the first FastAPI that lets Starlette past 1.0.
     "fastapi>=0.133",
