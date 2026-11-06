@@ -13,6 +13,7 @@ before 1.0, a minor release may break.
 ### Miscellaneous
 
 - **deps**: Adopt sdmxlib 0.87
+  - Requires `sdmxlib>=0.87,<0.88`, so sdmxlib-rest installs beside a statcatlib that requires 0.87. sdmxlib-rest does not call the Inventory reader. A provider that reads the Inventory with its own `Fetch` follows sdmxlib's upgrading entry, because sdmxlib 0.87 calls `Fetch` from worker threads.
 
 ## [0.10.1] - 2026-11-06
 
