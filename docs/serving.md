@@ -43,7 +43,7 @@ passes the live edition's directory to `LocalRegistry.edition`, with the live
 entry's `manifest_sha256` (`LocalRegistry.edition(path,
 manifest_sha256=live.manifest_sha256)`), so that a directory holding another
 manifest than the one the Inventory records raises `ManifestError`.
-sdmxlib-rest requires sdmxlib 0.87 or later. sdmxlib 0.85 and later fall back
+sdmxlib-rest requires sdmxlib 0.88 or later. sdmxlib 0.85 and later fall back
 to `catalog.json` and `inventory/HISTORY` when `CURRENT` is missing, malformed
 or names a root that fails to verify. sdmxlib 0.82 and later read a
 root of any event kind within format 1.x, including `kind: describe` and kinds
