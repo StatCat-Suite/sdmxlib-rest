@@ -8,6 +8,13 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.10.3] - 2026-11-11
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.88
+  - Requires `sdmxlib>=0.88,<0.89`, so sdmxlib-rest installs beside a statcatlib that requires 0.88. sdmxlib 0.88 raises `ManifestError` when it decodes a manifest whose `files` paths are absolute or leave the edition. `LocalRegistry.edition` already raises `ManifestError` for a manifest it refuses, so a provider handles the new case as it handles the others.
+
 ## [0.10.2] - 2026-11-06
 
 ### Miscellaneous
