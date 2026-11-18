@@ -13,12 +13,21 @@ each route needing to know about ``lang``.
 
 Precedence: ``?lang=<tag>`` > incoming ``Accept-Language`` > "en"
 (the localiser's own fallback).
+
+The override is one language tag, normalised by `sdmxlib.normalize_tag`. A
+value it refuses (``en_US``, ``*``, ``fr,en``) answers 400 with FastAPI's
+``{"detail": ...}`` body before any route runs (GH-80).
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs
+
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
+
+from sdmxlib_rest.localization import normalize_request_tag
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -52,6 +61,14 @@ class LangOverrideMiddleware:
         override = lang_values[-1].strip()
         if not override:
             await self.app(scope, receive, send)
+            return
+        try:
+            override = normalize_request_tag(override)
+        except HTTPException as exc:
+            # Raised here, the exception would bypass FastAPI's handlers and
+            # reach Starlette's ServerErrorMiddleware as a 500.
+            response = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+            await response(scope, receive, send)
             return
         # Replace (or append) accept-language while preserving every other
         # header. ASGI headers are (bytes, bytes) tuples; case is

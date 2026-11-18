@@ -80,7 +80,7 @@ class ConditionalGetMiddleware:
         # spuriously miss the cache for what is the same language choice.
         # Falls back to ``en`` when no header (mirrors `_lang_from_accept_language`).
         preferred = parse_accept_language(accept_language)
-        resolved_lang = preferred[0].lower() if preferred else "en"
+        resolved_lang = preferred[0] if preferred else "en"
 
         # `__version__` busts caches on every release. Without it, server-side
         # response shape changes (e.g. JSON post-processing in the v1 forwarders

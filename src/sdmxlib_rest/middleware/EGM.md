@@ -21,8 +21,8 @@ wires the dependency, the OpenAPI hook and the isa-l zip backend.
   `cache_control: str = ""` and `version: str = ""`. On GET and HEAD it
   computes the ETag as the first 16 hex characters of SHA-256 over
   `version|effective_token|path|query_string|Accept|resolved_lang`, quoted.
-  `resolved_lang` is the first tag from `parse_accept_language`, lowercased,
-  or `en` when the header is absent. `Last-Modified` comes from
+  `resolved_lang` is the first tag from `parse_accept_language`, which
+  lowercases it, or `en` when the header names no tag. `Last-Modified` comes from
   `runtime.last_modified` (ISO 8601, naive values read as UTC, via
   `_parse_built_at`). It answers 304 when `If-None-Match` matches (`*`, or a
   comma-separated list with `W/` stripped) or `If-Modified-Since` is at or
@@ -49,8 +49,11 @@ wires the dependency, the OpenAPI hook and the isa-l zip backend.
   final chunk arrives.
 - `LangOverrideMiddleware` (`lang_override.py`): when the query string holds a
   non-empty `lang`, replaces the `accept-language` request header with the
-  last `lang` value (stripped), drops duplicate `accept-language` headers, or
-  appends one if none existed.
+  last `lang` value (stripped and lowercased by `normalize_request_tag`),
+  drops duplicate `accept-language` headers, or appends one if none existed.
+  A value `sdmxlib.normalize_tag` refuses (`en_US`, `*`, `fr,en`) answers
+  400 with a JSON `{"detail": "lang: ..."}` body, and the request goes no
+  further.
 - `SdmxVersionAdvertiseMiddleware` and `canonicalise_version_token`
   (`version_token.py`): rewrite a response `Content-Type` segment
   `;version=X.Y.0` to `;version=X.Y` with `_VERSION_PATCH_RE`. Two-part

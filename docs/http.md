@@ -48,6 +48,12 @@ language. The service sets `name` and `description` to the best match for
 the header, for clients that cannot set one; the service treats it as
 `Accept-Language: fr` everywhere, including the ETag.
 
+Language tags are compared in lowercase, as sdmxlib stores them, so
+`Accept-Language: fr-CA` matches `names["fr-ca"]` and `Content-Language`
+carries the lowercase tag. The service ignores an `Accept-Language` entry
+that is not a well-formed RFC 5646 tag, such as `en_US`. A `?lang=` value
+that is not one answers 400 with a JSON `{"detail": ...}` body.
+
 ## Conditional GET
 
 Successful responses carry `ETag`, `Last-Modified` and `Cache-Control`
