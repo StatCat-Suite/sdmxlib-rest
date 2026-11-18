@@ -77,7 +77,9 @@ class ResolvedAvailability:
 
     Attributes:
         key_values: One entry per enumerated component, in the order the route
-            would scan them — the cube region preserves it.
+            would scan them — the cube region preserves it. The route gives the
+            DSD's time dimension as a ``time_range`` and renders a looked-up
+            entry as given, so a baked entry gives it the same way to match.
         obs_count: Rows in the flow. With no constraints this is the total, and
             it is the figure .Stat shows in its "(N observations)" badge. Zero
             renders as a 204.

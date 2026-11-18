@@ -22,6 +22,7 @@ from sdmxlib_rest.data.params import (
     KEEP_ALL_ATTRIBUTE_KEYWORDS,
     KEEP_ALL_MEASURE_KEYWORDS,
 )
+from sdmxlib_rest.localization import normalize_request_tag
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -233,11 +234,14 @@ def label_maps_for_dims(
         registry: Registry used to resolve each codelist URN.
         dim_codelist_urns: ``dim_id -> codelist URN`` for the flow's key dims.
         binding: Supplies the ``dim_id -> physical column`` mapping.
-        lang: Language tag passed to ``code_map``.
+        lang: Language tag passed to ``code_map``, typically taken from the
+            request. `normalize_request_tag` lowercases it first, and raises
+            ``HTTPException(400)`` for a tag that is not well-formed.
 
     Returns:
         ``{column_name: {code_id: label}}``, keyed on the physical column.
     """
+    lang = normalize_request_tag(lang)
     out: dict[str, dict[str, str]] = {}
     for dim_id, cl_urn in dim_codelist_urns.items():
         col = binding.dimension_column_map.get(dim_id)

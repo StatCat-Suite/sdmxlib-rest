@@ -64,7 +64,7 @@ helpers.
 - Availability helpers (`availability.py`): `_shaped_filter`, `_constrains`,
   `_narrow`, `_NON_EQ` (the `ne`, `lt`, `le`, `gt`, `ge`, `co`, `nc`, `sw` and
   `ew` operators), `_distinct`, `_observations`, `_time_dimension_id`,
-  `_strip_dim_from_key` and the module-level
+  `_key_value`, `_strip_dim_from_key` and the module-level
   `reject_unsupported_standard_params`.
 
 ## Invariants
@@ -163,9 +163,23 @@ helpers.
   (`_observations`) and reuses it for every component; no root is cached
   across requests. A `ValueError` from `registry.obs` (a sidecar with more
   than one row per join key, sdmxlib#412) is a 500 naming the flow.
-- `startPeriod` and `endPeriod` bound the DSD time dimension inclusively.
-  `_time_dimension_id` reads the DSD only when a bound is given and falls
-  back to `TIME_PERIOD`.
+- `startPeriod` and `endPeriod` bound the DSD time dimension inclusively,
+  and bound `TIME_PERIOD` when the flow has no DSD or its DSD no time
+  dimension. `_time_dimension_id` reads the DSD after the `AvailabilityValues`
+  lookup, once per registry and flow URN.
+- Every branch (`mode=available`, the combined `mode=exact` aggregate and the
+  per-component loop) gives the DSD's time dimension through `_key_value` as
+  a `KeyValue` whose `time_range` runs from the earliest period's start to
+  the latest period's end, both inclusive and zoneless (`sl.period_range`),
+  with empty `values` (GH-102). This is the shape sdmxlib's
+  `build_dataflow_constraint` and `build_component_availability` give, so a
+  baked constraint and a live answer agree. The time dimension keeps its
+  values when it holds no periods, when a period is one `sl.period_bounds`
+  cannot read, and when the flow has no DSD time dimension. Under
+  `mode=available` the time dimension's own query drops `startPeriod` and
+  `endPeriod`, so its range is the full span the other constraints allow.
+  A value `AvailabilityValues.lookup` returns is rendered as given; the
+  values the route offers to `store` carry the range.
 - `mode=exact` with `componentID=all` computes every distinct set and the
   count in one aggregate (`agg` plus `sl.len()`). `mode=available` drops each
   component's own key segment, `c[]` filters and, for the time dimension, the

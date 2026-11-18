@@ -46,7 +46,15 @@ SDMX-JSON carries both `name`, in one language, and `names`, in every
 language. The service sets `name` and `description` to the best match for
 `Accept-Language`, and answers with `Content-Language`. `?lang=fr` overrides
 the header, for clients that cannot set one; the service treats it as
-`Accept-Language: fr` everywhere, including the ETag.
+`Accept-Language: fr` everywhere, including the ETag. The value takes the
+header's syntax, so `?lang=fr,en` serves French and falls back to English.
+
+Language tags are compared in lowercase, as sdmxlib stores them, so
+`Accept-Language: fr-CA` matches `names["fr-ca"]` and `Content-Language`
+carries the lowercase tag. The service ignores an `Accept-Language` entry
+that is not a well-formed RFC 5646 tag, such as `en_US`. A `?lang=` value
+with no well-formed tag, such as `en_US` or `*`, is ignored, and the
+request's `Accept-Language` applies.
 
 ## Conditional GET
 

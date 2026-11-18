@@ -59,7 +59,10 @@ class AvailabilityValues(Protocol):
 component id (`all` or one id). It keys on the flow URN, so a consumer's
 SDMX-REST 1.5 forwarder and the 2.2.2 routes share an entry. The library
 renders the response from the values either way, so a precomputed answer
-negotiates format and language like a scanned one.
+negotiates format and language like a scanned one. It renders a looked-up
+`KeyValue` as given: give the time dimension as a `time_range`, as sdmxlib's
+`build_dataflow_constraint` does from 0.89, to match a scanned answer, which
+gives it that way ([GH-102](https://github.com/StatCat-Suite/sdmxlib-rest/issues/102)).
 
 Default: `NullAvailabilityValues`, which always scans.
 

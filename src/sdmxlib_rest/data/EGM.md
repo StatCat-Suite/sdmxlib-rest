@@ -60,7 +60,9 @@ logic. The helpers that map SDMX component ids to physical columns take an
   materialised `sl.DataStructure`, or `None`.
 - `label_maps_for_dims` (`projection.py`): `{column_name: {code_id: label}}`
   for each key dimension whose codelist the registry resolves, built from
-  `CodelistLike.code_map(lang=...)`.
+  `CodelistLike.code_map(lang=...)`. It normalises `lang` with
+  `normalize_request_tag` first, so a malformed tag raises
+  `HTTPException(400)`.
 - `decimals_format_replace_clause(binding, *, targets, decimals_id="DECIMALS")`
   (`sql.py`): `REPLACE` arguments that wrap each component id in `targets` in
   `printf('%.*f', CAST(<decimals column> AS INTEGER), <col>)`, where the

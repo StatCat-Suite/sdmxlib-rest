@@ -42,9 +42,12 @@ dependencies = [
     # sdmxlib-rest install beside a statcatlib that requires 0.87. 0.88 refuses
     # absolute and `..` manifest `files` paths on decode and adds an Inventory
     # conformance check, neither of which needs a change in `src`; this range
-    # lets sdmxlib-rest install beside a statcatlib that requires 0.88.
+    # lets sdmxlib-rest install beside a statcatlib that requires 0.88. 0.89 gives
+    # the time dimension of an availability constraint as a `TimeRange`, and
+    # `/availability` builds its range with 0.89's `sl.period_range` so live
+    # and baked constraints agree (GH-102).
     # Capped at the next minor while sdmxlib is pre-1.0, where a minor may break.
-    "sdmxlib>=0.88,<0.89",
+    "sdmxlib>=0.89,<0.90",
     "attrs>=24",
     # 0.133 is the first FastAPI that lets Starlette past 1.0.
     "fastapi>=0.133",

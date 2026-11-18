@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import json
 
+import sdmxlib as sl
+from fastapi import HTTPException
 from fastapi.responses import Response
 
 from sdmxlib_rest.negotiation import is_browser_request
@@ -58,10 +60,12 @@ def localized_json_response(
 def parse_accept_language(header: str | None) -> list[str]:
     """Return preferred language tags in order, with q-value sort.
 
-    ``Accept-Language: fr-CA, fr;q=0.9, en;q=0.5`` → ``["fr-CA", "fr", "en"]``.
-    A bare ``*`` is treated as "no preference" → empty list. Malformed
-    entries are silently dropped (we'd rather under-match than refuse a
-    request over a comma).
+    ``Accept-Language: fr-CA, fr;q=0.9, en;q=0.5`` -> ``["fr-ca", "fr", "en"]``.
+    Each tag passes through `sdmxlib.normalize_tag`, so the list is lowercase
+    and every entry is safe to hand to an sdmxlib ``lang`` parameter. A bare
+    ``*`` is treated as "no preference" -> empty list. Entries `normalize_tag`
+    refuses (``en_US``, ``en US``) and other malformed entries are dropped,
+    so a bad entry under-matches the request and never fails it.
     """
     if not header:
         return []
@@ -71,8 +75,9 @@ def parse_accept_language(header: str | None) -> list[str]:
         if not raw or raw.startswith("*"):
             continue
         tag, _, params = raw.partition(";")
-        tag = tag.strip()
-        if not tag:
+        try:
+            tag = sl.normalize_tag(tag.strip())
+        except sl.InvalidTagError:
             continue
         q = 1.0
         for param in params.split(";"):
@@ -86,6 +91,31 @@ def parse_accept_language(header: str | None) -> list[str]:
     # Stable sort by descending q, preserving the order of equal q.
     items.sort(key=lambda x: -x[0])
     return [tag for _, tag in items]
+
+
+def normalize_request_tag(tag: str, *, param: str = "lang") -> str:
+    """Normalise one request-supplied language tag, or raise a 400.
+
+    Call it on a tag taken from a request before passing it to an sdmxlib
+    ``lang`` parameter, which raises `sdmxlib.InvalidTagError` for a tag that
+    is not well-formed by RFC 5646.
+
+    Args:
+        tag: The tag as the request spelled it, such as ``"fr-CA"``.
+        param: The request parameter named in the error detail.
+
+    Returns:
+        `tag` in lowercase, as `sdmxlib.normalize_tag` returns it.
+
+    Raises:
+        HTTPException: 400, when `sdmxlib.normalize_tag` refuses `tag`. The
+            detail is ``"<param>: <sdmxlib's message>"``, which quotes at most
+            64 characters of the tag.
+    """
+    try:
+        return sl.normalize_tag(tag)
+    except sl.InvalidTagError as exc:
+        raise HTTPException(status_code=400, detail=f"{param}: {exc}") from exc
 
 
 def best_match(preferred: list[str], available: list[str]) -> str | None:

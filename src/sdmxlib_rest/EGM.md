@@ -115,7 +115,14 @@ seams.
   is set only when some node matched; with no `Accept-Language`, a bare `*`, a
   body that fails to parse as JSON, or no match, `localize_sdmx_json` returns
   the body unchanged and no language. A browser request gets
-  `application/json` as its media type.
+  `application/json` as its media type. `parse_accept_language` returns
+  each tag lowercased by `sdmxlib.normalize_tag` and drops the entries it
+  refuses (`en_US`, `en US`), so its output is safe to pass to an sdmxlib
+  `lang` parameter (GH-80).
+- `normalize_request_tag(tag, *, param="lang")` (`localization.py`): returns
+  `sdmxlib.normalize_tag(tag)`, and raises `HTTPException(400)` with detail
+  `"<param>: <sdmxlib's message>"` for a tag it refuses. Call it on any
+  request-supplied tag before it reaches sdmxlib.
 - `configure_logging` (`logging.py`): replaces loguru's sinks with one stderr
   sink at `level`. No library module calls it.
 - Subpackages:
@@ -178,6 +185,11 @@ seams.
   the fingerprint so a racing request can pair a new body only with the old
   key.
 - `run_structure_splices` re-encodes only when a splice reports a change.
+- A language tag from a request reaches sdmxlib only after
+  `sdmxlib.normalize_tag` has accepted it: `parse_accept_language` drops a
+  refused `Accept-Language` or `?lang=` entry, a `?lang=` value with no
+  accepted entry is ignored, and a refused `label_maps_for_dims` tag answers
+  400 (`tests/test_request_lang_tags.py`).
 
 ## Side Effects
 
