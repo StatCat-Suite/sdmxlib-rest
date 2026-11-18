@@ -14,9 +14,16 @@ each route needing to know about ``lang``.
 Precedence: ``?lang=<tag>`` > incoming ``Accept-Language`` > "en"
 (the localiser's own fallback).
 
-The override is one language tag, normalised by `sdmxlib.normalize_tag`. A
-value it refuses (``en_US``, ``*``, ``fr,en``) answers 400 with FastAPI's
-``{"detail": ...}`` body before any route runs (GH-80).
+The value is parsed like an ``Accept-Language`` header by
+`parse_accept_language`: a comma list with optional q-weights, each tag
+lowercased by `sdmxlib.normalize_tag`, refused entries dropped and ``*``
+read as no preference. ``?lang=fr,en`` serves ``fr`` and falls back to
+``en``. A value with no usable tag (``en_US``, ``*``, ``-``) is ignored, and
+the request's own ``Accept-Language`` applies. The override never answers an
+error: .Stat's ``GetLanguagePreference`` (dotstatsuite-core-getdata,
+``DotStatServices.GetData/Utils/Extensions.cs:524-561`` at ``c52a9630``)
+falls back to its default language for any value, and this middleware
+accepts every value .Stat does (GH-80).
 """
 
 from __future__ import annotations
@@ -24,10 +31,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs
 
-from fastapi import HTTPException
-from fastapi.responses import JSONResponse
-
-from sdmxlib_rest.localization import normalize_request_tag
+from sdmxlib_rest.localization import parse_accept_language
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -58,18 +62,12 @@ class LangOverrideMiddleware:
         if not lang_values or not lang_values[-1]:
             await self.app(scope, receive, send)
             return
-        override = lang_values[-1].strip()
-        if not override:
+        tags = parse_accept_language(lang_values[-1])
+        if not tags:
             await self.app(scope, receive, send)
             return
-        try:
-            override = normalize_request_tag(override)
-        except HTTPException as exc:
-            # Raised here, the exception would bypass FastAPI's handlers and
-            # reach Starlette's ServerErrorMiddleware as a 500.
-            response = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-            await response(scope, receive, send)
-            return
+        # The list is already in preference order, so it needs no q-weights.
+        override = ", ".join(tags)
         # Replace (or append) accept-language while preserving every other
         # header. ASGI headers are (bytes, bytes) tuples; case is
         # lowercase by contract but we lower-compare defensively.

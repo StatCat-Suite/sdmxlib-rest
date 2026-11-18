@@ -49,11 +49,12 @@ wires the dependency, the OpenAPI hook and the isa-l zip backend.
   final chunk arrives.
 - `LangOverrideMiddleware` (`lang_override.py`): when the query string holds a
   non-empty `lang`, replaces the `accept-language` request header with the
-  last `lang` value (stripped and lowercased by `normalize_request_tag`),
-  drops duplicate `accept-language` headers, or appends one if none existed.
-  A value `sdmxlib.normalize_tag` refuses (`en_US`, `*`, `fr,en`) answers
-  400 with a JSON `{"detail": "lang: ..."}` body, and the request goes no
-  further.
+  tags `parse_accept_language` reads from the last `lang` value, joined in
+  preference order (`?lang=fr-CA,en` gives `fr-ca, en`), drops duplicate
+  `accept-language` headers, or appends one if none existed. A value with
+  no tag `sdmxlib.normalize_tag` accepts (`en_US`, `*`, `-`) leaves the
+  request unchanged, so its own `Accept-Language` applies. It never answers
+  an error, matching .Stat's `GetLanguagePreference` (GH-80).
 - `SdmxVersionAdvertiseMiddleware` and `canonicalise_version_token`
   (`version_token.py`): rewrite a response `Content-Type` segment
   `;version=X.Y.0` to `;version=X.Y` with `_VERSION_PATCH_RE`. Two-part

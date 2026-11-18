@@ -187,8 +187,9 @@ seams.
 - `run_structure_splices` re-encodes only when a splice reports a change.
 - A language tag from a request reaches sdmxlib only after
   `sdmxlib.normalize_tag` has accepted it: `parse_accept_language` drops a
-  refused `Accept-Language` entry, and a refused `?lang=` value or
-  `label_maps_for_dims` tag answers 400 (`tests/test_request_lang_tags.py`).
+  refused `Accept-Language` or `?lang=` entry, a `?lang=` value with no
+  accepted entry is ignored, and a refused `label_maps_for_dims` tag answers
+  400 (`tests/test_request_lang_tags.py`).
 
 ## Side Effects
 
