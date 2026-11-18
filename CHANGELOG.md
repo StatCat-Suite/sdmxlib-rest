@@ -8,6 +8,28 @@ Changes, Features, Bug Fixes and so on), and the release PR edits it. Releases
 The project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html);
 before 1.0, a minor release may break.
 
+## [0.11.0] - 2026-11-18
+
+### Breaking Changes
+
+- Give the time dimension of /availability as a time range (GH-102)
+  - The DSD's time dimension in the answer's cube region is a `timeRange` from the earliest period's start to the latest period's end, both inclusive and zoneless, where it was a list of periods. Before: `{"id": "TIME_PERIOD", "values": ["2020", "2021"]}`. After: `{"id": "TIME_PERIOD", "timeRange": {"startPeriod": {"period": "2020-01-01T00:00:00", "isInclusive": true}, "endPeriod": {"period": "2021-12-31T23:59:59", "isInclusive": true}}}`.
+  - `mode=available`, `mode=exact` and the per-component answers all build the range with sdmxlib 0.89's `sl.period_range`. Under `mode=available` the range spans every period the flow holds, ignoring `startPeriod` and `endPeriod`.
+  - The time dimension keeps its `values` when the flow has no DSD time dimension, holds no periods, or holds a period that cannot be read.
+  - An `AvailabilityValues` seam's stored answers are served as stored. Re-bake them with `sdmxlib.builders.build_dataflow_constraint` or `build_component_availability` from sdmxlib 0.89 to give the time dimension as a range, as a scanned answer does.
+
+### Bug Fixes
+
+- Read ?lang= like Accept-Language and ignore an unusable value (GH-80)
+  - `?lang=` takes a comma list with q-weights, as the `Accept-Language` header does, and overrides the header with the tags it keeps, in preference order. A value with no usable tag, such as `en_US`, `*` or `-`, is ignored and the request's own `Accept-Language` applies, so `?lang=` never answers 400.
+- Normalise request language tags before they reach sdmxlib (GH-80)
+  - Language tags from `?lang=` and `Accept-Language` are lowercased by `sdmxlib.normalize_tag`, which refuses a tag that is not well-formed by RFC 5646. A refused tag is dropped, where sdmxlib 0.88 and later would have raised and answered 500.
+
+### Miscellaneous
+
+- **deps**: Adopt sdmxlib 0.89
+  - Requires `sdmxlib>=0.89,<0.90`. sdmxlib 0.89 adds `sl.period_range`, which GH-102 uses.
+
 ## [0.10.3] - 2026-11-11
 
 ### Miscellaneous
