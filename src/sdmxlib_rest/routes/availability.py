@@ -7,12 +7,15 @@ region, now show only the topics that have data for it".
 
 The response is a SDMX StructureMessage carrying a single
 `DataConstraint` with one ``CubeRegion`` whose
-``KeyValue`` lists the available codes for ``componentID``.
+``KeyValue`` lists the available codes for ``componentID``. The DSD's time
+dimension is given as the ``TimeRange`` its periods cover, as sdmxlib's
+availability builders give it (GH-102).
 """
 
 from __future__ import annotations
 
 import time
+import weakref
 from collections.abc import Callable
 from typing import Annotated, Any, Literal
 
@@ -170,11 +173,39 @@ def _observations(registry: sl.EditionRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow
         raise HTTPException(status_code=500, detail=f"cannot answer availability for {flow_urn}: {exc}") from exc
 
 
-def _time_dimension_id(registry: sl.EditionRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str:
-    """The DSD's time dimension, which ``startPeriod`` / ``endPeriod`` bound."""
-    dsd = registry.dsd(flow_urn)
-    time_dimension = dsd.time_dimension if dsd is not None else None
-    return time_dimension.id if time_dimension is not None else "TIME_PERIOD"
+# Keyed per registry, and weak, for the reasons `key_dimension_ids` gives: a
+# reopened edition is a new registry. A DSD read is ~15 ms on a large census
+# edition, and every scanned request now needs the time dimension's id.
+_TIME_DIMENSION_IDS: weakref.WeakKeyDictionary[sl.EditionRegistry, dict[str, str | None]] = weakref.WeakKeyDictionary()
+
+
+def _time_dimension_id(registry: sl.EditionRegistry, flow_urn: sl.SdmxUrn[sl.Dataflow]) -> str | None:
+    """The id of the flow's DSD's time dimension; None without a DSD or a time dimension in it.
+
+    Memoised per registry and flow URN.
+    """
+    per_registry = _TIME_DIMENSION_IDS.setdefault(registry, {})
+    cache_key = str(flow_urn)
+    if cache_key not in per_registry:
+        dsd = registry.dsd(flow_urn)
+        time_dimension = dsd.time_dimension if dsd is not None else None
+        per_registry[cache_key] = time_dimension.id if time_dimension is not None else None
+    return per_registry[cache_key]
+
+
+def _key_value(component_id: str, values: frozenset[str], time_id: str | None) -> KeyValue:
+    """One component's `KeyValue`: the `TimeRange` its periods cover for the time dimension, else its values.
+
+    Follows sdmxlib's availability builders, so a live answer and a constraint
+    baked by `build_dataflow_constraint` agree: the range runs from the
+    earliest period's start to the latest period's end, both inclusive and
+    zoneless (`sl.period_range`). The time dimension keeps its values when it
+    holds no periods, when a period is one `sl.period_bounds` cannot read,
+    and when the registry holds no DSD for the flow (``time_id`` is None).
+    """
+    if component_id == time_id and (time_range := sl.period_range(values)) is not None:
+        return KeyValue(dimension_id=component_id, time_range=time_range)
+    return KeyValue(dimension_id=component_id, values=values)
 
 
 # `all` expands to the artefact-type tokens we can actually source from the edition.
@@ -255,6 +286,9 @@ _STRUCTURE_200_CONTENT: dict[int | str, dict[str, Any]] = {
         "`DataConstraint` with one `CubeRegion` whose single `KeyValue` lists the "
         "available codes. `constraint_type=Actual` (the values exist in the data, not "
         "merely the allowed set from the codelist).\n\n"
+        "The DSD's time dimension is given as a `timeRange` from the earliest period's "
+        "start to the latest period's end, both inclusive, and lists its periods instead "
+        "when one cannot be read as a time range.\n\n"
         "Only `context=dataflow` is implemented (others 501)."
     ),
     responses={**_STRUCTURE_200_CONTENT, **_ERROR_RESPONSES},
@@ -472,15 +506,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    # 1.5 backport: startPeriod / endPeriod were SDMX-REST 1.5's mechanism for
-    # inclusive TIME_PERIOD bounds. 2.2.2 dropped them; the canonical
-    # equivalent is `c[TIME_PERIOD]=ge:<v>+le:<v>`. We accept both forms on
-    # /availability to match /data — strict 2.2.2 clients should
-    # prefer the c[] form.
-    # Resolved only when a bound is given: a DSD read is ~15 ms on a large census edition
-    # and most requests carry no period bound.
     has_bounds = start_period is not None or end_period is not None
-    periods = (_time_dimension_id(registry, flow_urn) if has_bounds else "", start_period, end_period)
 
     # Precomputed values, for the one case precompute can cover: no filter at
     # all. Judged on the filter the shaper produced, not on the URL — a shaper
@@ -499,6 +525,14 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
             accept_language=accept_language,
             references=references,
         )
+
+    # 1.5 backport: startPeriod / endPeriod were SDMX-REST 1.5's mechanism for
+    # inclusive TIME_PERIOD bounds. 2.2.2 dropped them; the canonical
+    # equivalent is `c[TIME_PERIOD]=ge:<v>+le:<v>`. We accept both forms on
+    # /availability to match /data — strict 2.2.2 clients should
+    # prefer the c[] form.
+    time_id = _time_dimension_id(registry, flow_urn)
+    periods = (time_id or "TIME_PERIOD", start_period, end_period)
 
     obs = _observations(registry, flow_urn)
     try:
@@ -566,7 +600,7 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
                     {k: v for k, v in non_eq_filters.items() if k != comp_id},
                     (periods[0], None, None) if comp_id == periods[0] else periods,
                 )
-                key_values.append(KeyValue(dimension_id=comp_id, values=_distinct(relaxed, comp_id)))
+                key_values.append(_key_value(comp_id, _distinct(relaxed, comp_id), time_id))
             # obs_count for mode=available reports the cube cardinality under
             # the FULL filter (all constraints applied) — the same number .Stat
             # / DLM show in the "(N observations)" badge. The per-component
@@ -582,12 +616,10 @@ async def get_availability(  # noqa: C901, PLR0912, PLR0915
             )
             for alias, comp_id in aliases.items():
                 values = frozenset(str(v) for v in row[alias] or () if v is not None)
-                key_values.append(KeyValue(dimension_id=comp_id, values=values))
+                key_values.append(_key_value(comp_id, values, time_id))
             obs_count_value = int(row["n"] or 0)
         else:
-            key_values.extend(
-                KeyValue(dimension_id=comp_id, values=_distinct(narrowed, comp_id)) for comp_id in component_ids
-            )
+            key_values.extend(_key_value(comp_id, _distinct(narrowed, comp_id), time_id) for comp_id in component_ids)
             obs_count_value = narrowed.count()
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc.args[0] if exc.args else exc)) from exc

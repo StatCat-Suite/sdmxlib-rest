@@ -104,9 +104,25 @@ def client(runtime: CatalogRuntime) -> Iterator[TestClient]:
 
 
 def _available(payload: dict[str, Any]) -> dict[str, list[str]]:
-    """Available values per component, out of the single CubeRegion."""
+    """Available values per component, out of the single CubeRegion; a time range reads as its two bounds."""
     region = payload["data"]["dataConstraints"][0]["cubeRegions"][0]
-    return {kv["id"]: sorted(kv["values"]) for kv in region["keyValues"]}
+    return {
+        kv["id"]: (
+            [kv["timeRange"]["startPeriod"]["period"], kv["timeRange"]["endPeriod"]["period"]]
+            if "timeRange" in kv
+            else sorted(kv["values"])
+        )
+        for kv in region["keyValues"]
+    }
+
+
+def _period_range(frame: pl.DataFrame) -> list[str]:
+    """The bounds of the range ``/availability`` gives for the frame's periods (GH-102)."""
+    time_range = sl.period_range(_distinct(frame, "TIME_PERIOD"))
+    assert time_range is not None
+    assert time_range.start is not None
+    assert time_range.end is not None
+    return [time_range.start.period, time_range.end.period]
 
 
 def _distinct(frame: pl.DataFrame, column: str) -> list[str]:
@@ -177,8 +193,9 @@ def test_unfiltered_availability_matches_the_observations(client: TestClient, ob
 
     assert resp.status_code == 200
     available = _available(resp.json())
-    for column in (*_DIMENSIONS, "TIME_PERIOD"):
+    for column in _DIMENSIONS:
         assert available[column] == _distinct(observations, column), column
+    assert available["TIME_PERIOD"] == _period_range(observations)
 
 
 def test_the_constraint_counts_every_observation(client: TestClient) -> None:
@@ -198,7 +215,7 @@ def test_a_key_narrows_availability_as_the_data_does(client: TestClient, observa
     available = _available(resp.json())
     assert available["DIM_1"] == [code]
     assert available["DIM_2"] == _distinct(narrowed, "DIM_2")
-    assert available["TIME_PERIOD"] == _distinct(narrowed, "TIME_PERIOD")
+    assert available["TIME_PERIOD"] == _period_range(narrowed)
 
 
 def test_availability_serialises_as_sdmx_ml(client: TestClient) -> None:

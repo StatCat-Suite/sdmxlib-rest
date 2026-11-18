@@ -1,7 +1,10 @@
 # Availability
 
 `/availability` returns the distinct values each component takes under a
-partial key, and the observation count. It is the slowest route a
+partial key, and the observation count. The DSD's time dimension is given as
+the time range its periods cover, from the earliest period's start to the
+latest period's end, the shape sdmxlib's availability builders give and the
+.Stat Suite Data Explorer reads ([GH-102](https://github.com/StatCat-Suite/sdmxlib-rest/issues/102)). It is the slowest route a
 picker-style client calls on every step, and the unfiltered request for a
 whole flow is both the most common and the most expensive.
 

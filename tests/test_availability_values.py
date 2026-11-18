@@ -174,7 +174,9 @@ def test_a_miss_offers_the_scanned_values_back(world: World) -> None:
     assert key == AvailabilityKey(token=world.manifest.edition_id, flow_urn=FLOW, component_id="all")
     assert resolved.obs_count == 3
     scanned = {kv.dimension_id: sorted(v.value for v in kv.values) for kv in resolved.key_values}
-    assert scanned == {"REF_AREA": ["CA", "US"], "SEX": ["F", "M"], "TIME_PERIOD": ["2020", "2021"]}
+    assert scanned == {"REF_AREA": ["CA", "US"], "SEX": ["F", "M"], "TIME_PERIOD": []}
+    (time_period,) = (kv for kv in resolved.key_values if kv.dimension_id == "TIME_PERIOD")
+    assert time_period.time_range == sl.period_range(["2020", "2021"]), "the store gets the range the route renders"
 
 
 def test_an_empty_answer_is_stored_and_served_as_a_204(world: World) -> None:
